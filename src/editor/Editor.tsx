@@ -57,10 +57,11 @@ function Gallery() {
 
 export function Editor() {
   const gallery = useEditor((s) => s.gallery)
+  const inspOpen = useEditor((s) => s.inspOpen)
   return (
     <div className="editor">
       <EditorHeader />
-      <div className="ed-body">
+      <div className={`ed-body ${inspOpen ? '' : 'insp-closed'}`}>
         <Stage />
         <Inspector />
       </div>

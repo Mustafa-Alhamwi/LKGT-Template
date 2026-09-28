@@ -109,6 +109,8 @@ export interface Prefs {
   guides: boolean
   showSafe: boolean
   showGrid: boolean
+  /** فحص جودة تلقائي قبل التصدير */
+  checkBeforeExport: boolean
 }
 
 const DEFAULT_PREFS: Prefs = {
@@ -122,6 +124,7 @@ const DEFAULT_PREFS: Prefs = {
   guides: true,
   showSafe: false,
   showGrid: false,
+  checkBeforeExport: true,
 }
 
 export interface Snap {
@@ -175,6 +178,8 @@ export interface EditorState extends Persisted {
   tab: InspectorTab
   clip: Clip | null
   homeCat: CategoryId
+  /** لوحة الخصائص ظاهرة (تُستخدم فقط في الشاشات الضيقة) */
+  inspOpen: boolean
 }
 
 const LS_KEY = 'lkgt-studio:v3'
@@ -298,6 +303,7 @@ export const useEditor = create<EditorState>(() => ({
   tab: 'elements',
   clip: null,
   homeCat: 'ads',
+  inspOpen: typeof window === 'undefined' ? true : window.innerWidth > 1000,
 }))
 
 const get = useEditor.getState

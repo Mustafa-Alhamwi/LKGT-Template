@@ -3,7 +3,7 @@ import { AlertTriangle, ArrowLeftRight, Check, Download, Eye, EyeOff, HardDriveD
 import { saveAsTemplate, setPrefs, toast, useEditor } from '../store/editor'
 import { buildCommands, formatKeys, keysFor } from '../lib/commands'
 import { AR_WEIGHTS, LAT_WEIGHTS, UI_WEIGHTS, canQueryLocalFonts, clearImportedFonts, importFontFiles, importFromDevice } from '../lib/fonts'
-import { Btn, Chips } from '../ui/kit'
+import { Btn, Chips, Switch } from '../ui/kit'
 import { pickFile } from '../lib/importer'
 import { reloadFonts } from '../lib/fontBoot'
 import { AI_MODELS, testClaude } from '../lib/claude'
@@ -201,6 +201,7 @@ function AiTab() {
 
 function AppTab() {
   const [, force] = useState(0)
+  const checkBefore = useEditor((s) => s.prefs.checkBeforeExport)
   const [usage, setUsage] = useState<{ used: number; quota: number } | null>(null)
   const [persisted, setPersisted] = useState<boolean | null>(null)
   useEffect(() => onInstallChange(() => force((x) => x + 1)), [])
@@ -248,6 +249,7 @@ function AppTab() {
           {persisted ? 'التخزين محمي ✓' : 'حماية بياناتي من الحذف التلقائي'}
         </Btn>
       </div>
+      <Switch label="فحص جودة التصميم تلقائياً قبل التصدير" checked={checkBefore} onChange={(v) => setPrefs({ checkBeforeExport: v })} />
       <p className="hint">المشاريع والصور والمكتبة تُحفظ على هذا الجهاز فقط (IndexedDB). للنسخ الاحتياطي: «ملف ← تصدير ملف المشروع (.lkgt)» لكل مشروع، وحزم الفريق من الصفحة الرئيسية للقوالب والهوية.</p>
     </div>
   )

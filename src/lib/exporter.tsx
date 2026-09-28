@@ -185,9 +185,3 @@ export function downloadBlob(blob: Blob, name: string) {
   a.remove()
   setTimeout(() => URL.revokeObjectURL(url), 4000)
 }
-
-export function exportFileName(design: Design, templateName: string, ext: string): string {
-  const title = (design.content.texts.title || 'design').replace(/\*/g, '').trim()
-  const safe = `${title} - ${templateName}`.replace(/[\\/:*?"<>|\n]+/g, ' ').replace(/\s+/g, ' ').trim()
-  return `LKGT - ${safe}.${ext}`
-}

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { TOOL_ITEMS } from './toolItems'
 import {
   ArrowRight, ChevronDown, ChevronLeft, ChevronRight, Command, Copy, Download, FileArchive, FilePlus2, FolderOpen, History, Images, LayoutGrid, Moon, Palette,
-  Redo2, RotateCcw, Ruler, Save, Settings, Eraser, Sun, Undo2, Keyboard, WandSparkles,
+  Redo2, RotateCcw, Ruler, Save, Settings, Eraser, Sun, Undo2, Keyboard, WandSparkles, MoreHorizontal, PanelRight,
 } from 'lucide-react'
 import { LkgtLogo } from '../brand/LkgtLogo'
 import { Btn, Chips, Menu, MenuItem } from '../ui/kit'
@@ -105,6 +105,7 @@ export function EditorHeader() {
   const projectName = useEditor((s) => s.projectName)
   const cv = useEditor((s) => canvasOf(s.design))
   const cat = useEditor((s) => categoryOf(s.design))
+  const inspOpen = useEditor((s) => s.inspOpen)
   const t = findTemplate({ userTemplates }, templateId)
   const hasOverride = !!t && t.builtIn && !!overrides[t.id]
 
@@ -115,8 +116,10 @@ export function EditorHeader() {
           <ArrowRight size={17} />
           <span className="hide-sm">الرئيسية</span>
         </button>
-        <span className="vsep" />
-        <LkgtLogo variant="color" height={26} />
+        <span className="vsep hide-md" />
+        <span className="hide-md ed-logo">
+          <LkgtLogo variant="color" height={26} />
+        </span>
         <button className="tname" onClick={() => useEditor.setState({ gallery: true })} title="تغيير القالب (Ctrl+T)">
           <LayoutGrid size={16} />
           <span>
@@ -125,13 +128,13 @@ export function EditorHeader() {
           </span>
           <ChevronDown size={15} />
         </button>
-        <button className="ibtn" onClick={() => stepTemplate(-1)} title="القالب السابق">
+        <button className="ibtn hide-md" onClick={() => stepTemplate(-1)} title="القالب السابق">
           <ChevronRight size={18} />
         </button>
-        <button className="ibtn" onClick={() => stepTemplate(1)} title="القالب التالي">
+        <button className="ibtn hide-md" onClick={() => stepTemplate(1)} title="القالب التالي">
           <ChevronLeft size={18} />
         </button>
-        <input className="proj-name" value={projectName} placeholder="اسم المشروع…" onChange={(e) => renameProject(e.target.value)} title="اسم المشروع" />
+        <input className="proj-name hide-md" value={projectName} placeholder="اسم المشروع…" onChange={(e) => renameProject(e.target.value)} title="اسم المشروع" />
       </div>
 
       <div className="ed-end">
@@ -237,17 +240,59 @@ export function EditorHeader() {
           )}
         </Menu>
         <ToolsMenu />
-        <button className="ibtn" onClick={() => useEditor.setState({ dialog: 'commands' })} title="لوحة الأوامر (Ctrl+K)">
-          <Command size={18} />
-        </button>
-        <button className="ibtn" onClick={() => useEditor.setState({ dialog: 'shortcuts' })} title="اختصارات">
-          <Keyboard size={18} />
-        </button>
-        <button className="ibtn" onClick={() => useEditor.setState({ uiTheme: uiTheme === 'dark' ? 'light' : 'dark' })} title="تبديل مظهر البرنامج">
-          {uiTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-        </button>
-        <button className="ibtn" onClick={() => useEditor.setState({ dialog: 'settings' })} title="الإعدادات">
-          <Settings size={18} />
+        <span className="ed-secondary hide-md">
+          <button className="ibtn" onClick={() => useEditor.setState({ dialog: 'commands' })} title="لوحة الأوامر (Ctrl+K)">
+            <Command size={18} />
+          </button>
+          <button className="ibtn" onClick={() => useEditor.setState({ dialog: 'shortcuts' })} title="اختصارات">
+            <Keyboard size={18} />
+          </button>
+          <button className="ibtn" onClick={() => useEditor.setState({ uiTheme: uiTheme === 'dark' ? 'light' : 'dark' })} title="تبديل مظهر البرنامج">
+            {uiTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+          <button className="ibtn" onClick={() => useEditor.setState({ dialog: 'settings' })} title="الإعدادات">
+            <Settings size={18} />
+          </button>
+        </span>
+        <span className="show-md">
+          <Menu trigger={<MoreHorizontal size={18} />} align="end">
+            {(close) => (
+              <>
+                <MenuItem icon={<Command size={15} />} onClick={() => (close(), useEditor.setState({ dialog: 'commands' }))}>
+                  لوحة الأوامر (Ctrl+K)
+                </MenuItem>
+                <MenuItem icon={<Keyboard size={15} />} onClick={() => (close(), useEditor.setState({ dialog: 'shortcuts' }))}>
+                  الاختصارات
+                </MenuItem>
+                <MenuItem icon={uiTheme === 'dark' ? <Sun size={15} /> : <Moon size={15} />} onClick={() => (close(), useEditor.setState({ uiTheme: uiTheme === 'dark' ? 'light' : 'dark' }))}>
+                  تبديل مظهر البرنامج
+                </MenuItem>
+                <MenuItem icon={<Settings size={15} />} onClick={() => (close(), useEditor.setState({ dialog: 'settings' }))}>
+                  الإعدادات
+                </MenuItem>
+                <div className="menu-sep" />
+                <MenuItem
+                  icon={<Save size={15} />}
+                  onClick={() => {
+                    close()
+                    const n = prompt('اسم المشروع', useEditor.getState().projectName)
+                    if (n !== null) renameProject(n)
+                  }}
+                >
+                  تسمية المشروع…
+                </MenuItem>
+                <MenuItem icon={<ChevronRight size={15} />} onClick={() => (close(), stepTemplate(-1))}>
+                  القالب السابق
+                </MenuItem>
+                <MenuItem icon={<ChevronLeft size={15} />} onClick={() => (close(), stepTemplate(1))}>
+                  القالب التالي
+                </MenuItem>
+              </>
+            )}
+          </Menu>
+        </span>
+        <button className={`ibtn show-sm ${inspOpen ? 'on' : ''}`} onClick={() => useEditor.setState({ inspOpen: !inspOpen })} title={inspOpen ? 'إخفاء لوحة الخصائص' : 'إظهار لوحة الخصائص'}>
+          <PanelRight size={18} />
         </button>
         <div className="export-split">
           <button className="btn primary" onClick={exportCurrent} title="تصدير (Ctrl+E)">
@@ -281,7 +326,7 @@ export function EditorHeader() {
                     exportAllTemplates()
                   }}
                 >
-                  تصدير المحتوى بكل القوالب
+                  تصدير المحتوى بكل قوالب الفئة (ZIP)
                 </MenuItem>
               </div>
             )}
