@@ -13,5 +13,7 @@ export default defineConfig({
   server: { port: 5173, host: true, open: false, headers: isolation },
   preview: { port: 4173, host: true, open: false, headers: isolation },
   worker: { format: 'es' },
+  // وحدات تُحمَّل عند أول استخدام — نجهّزها مسبقاً لتفادي إعادة تحميل الصفحة أثناء العمل في وضع التطوير
+  optimizeDeps: { include: ['@anthropic-ai/sdk', 'mp4-muxer', 'ag-psd', 'gifenc', 'fflate', 'qrcode-generator', 'html-to-image'] },
   build: { chunkSizeWarningLimit: 1500 },
 })
