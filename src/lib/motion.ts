@@ -200,12 +200,22 @@ export function motionSupport() {
   return { mp4: hasCodecs, recorder: rec }
 }
 
-async function pickCodec(w: number, h: number, fps: number, bitrate: number): Promise<string | null> {
+interface CodecPick {
+  codec: string
+  mux: 'avc' | 'vp9'
+}
+
+/** H.264 أولاً (مقبول في إنستغرام)، وإلا VP9 داخل MP4 (يعمل في المتصفحات لكن قد لا تقبله إنستغرام) */
+async function pickCodec(w: number, h: number, fps: number, bitrate: number): Promise<CodecPick | null> {
   if (typeof VideoEncoder === 'undefined') return null
-  for (const codec of ['avc1.640033', 'avc1.640032', 'avc1.4d0033', 'avc1.4d0032', 'avc1.42003e', 'avc1.42001f']) {
+  const cands: CodecPick[] = [
+    ...['avc1.640033', 'avc1.640032', 'avc1.4d0033', 'avc1.4d0032', 'avc1.42003e', 'avc1.42001f'].map((codec) => ({ codec, mux: 'avc' as const })),
+    { codec: 'vp09.00.50.08', mux: 'vp9' },
+  ]
+  for (const c of cands) {
     try {
-      const r = await VideoEncoder.isConfigSupported({ codec, width: w, height: h, bitrate, framerate: fps })
-      if (r.supported) return codec
+      const r = await VideoEncoder.isConfigSupported({ codec: c.codec, width: w, height: h, bitrate, framerate: fps })
+      if (r.supported) return c
     } catch {
       /* التالي */
     }
@@ -310,7 +320,7 @@ export async function runMotion(job: MotionJob, ctl: Ctl, progress: OnProgress):
   if (codec) {
     const { Muxer, ArrayBufferTarget } = await import('mp4-muxer')
     const target = new ArrayBufferTarget()
-    const muxer = new Muxer({ target, video: { codec: 'avc', width: outW, height: outH }, fastStart: 'in-memory' })
+    const muxer = new Muxer({ target, video: { codec: codec.mux, width: outW, height: outH }, fastStart: 'in-memory' })
     let encErr: unknown = null
     const encoder = new VideoEncoder({
       output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
@@ -318,7 +328,7 @@ export async function runMotion(job: MotionJob, ctl: Ctl, progress: OnProgress):
         encErr = e
       },
     })
-    encoder.configure({ codec, width: outW, height: outH, bitrate, framerate: fps })
+    encoder.configure({ codec: codec.codec, width: outW, height: outH, bitrate, framerate: fps })
     try {
       for (let i = 0; i < frames; i++) {
         checkCancel(ctl)
@@ -340,7 +350,8 @@ export async function runMotion(job: MotionJob, ctl: Ctl, progress: OnProgress):
     }
     muxer.finalize()
     download(new Blob([target.buffer], { type: 'video/mp4' }), name, 'video/mp4')
-    return { name, seconds: total, frames, codec: 'MP4 · H.264', compat: true }
+    const h264 = codec.mux === 'avc'
+    return { name, seconds: total, frames, codec: h264 ? 'MP4 · H.264' : 'MP4 · VP9', compat: h264 }
   }
 
   /* ---------- بديل: MediaRecorder بالزمن الحقيقي ---------- */
