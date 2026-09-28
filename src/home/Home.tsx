@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  ArrowLeft, Boxes, CalendarDays, Command, Copy, FileArchive, FolderOpen, Layers, MoreHorizontal, Moon, Pencil, Plus, Search, Settings, Sun, Trash2, Upload, Download, Star,
+  ArrowLeft, BookOpen, Boxes, X, CalendarDays, Command, Copy, FileArchive, FolderOpen, Layers, MoreHorizontal, Moon, Pencil, Plus, Search, Settings, Sun, Trash2, Upload, Download, Star,
 } from 'lucide-react'
 import { LkgtLogo } from '../brand/LkgtLogo'
 import { CATEGORY_DEFS } from '../model/categories'
@@ -205,6 +205,46 @@ function FmtIcon({ w, h }: { w: number; h: number }) {
   return <i className="fmt-ic" style={{ width: Math.max(8, w * k), height: Math.max(8, h * k) }} />
 }
 
+function Welcome() {
+  const [seen, setSeen] = useState(() => {
+    try {
+      return !!localStorage.getItem('lkgt-welcome')
+    } catch {
+      return true
+    }
+  })
+  if (seen) return null
+  const dismiss = () => {
+    try {
+      localStorage.setItem('lkgt-welcome', '1')
+    } catch {
+      /* */
+    }
+    setSeen(true)
+  }
+  return (
+    <div className="welcome">
+      <div>
+        <b>أهلاً بك في استوديو LKGT 👋</b>
+        <span>أنشئ منشورات إعلانية جاهزة في دقائق: اختر قالباً، أسقط صورة المنتج، واكتب نصك — ثم صدّر لأي مقاس. تعرّف على الأدوات الذكية في الدليل.</span>
+      </div>
+      <button
+        className="btn primary sm"
+        onClick={() => {
+          dismiss()
+          useEditor.setState({ dialog: 'guide' })
+        }}
+      >
+        <BookOpen size={15} />
+        <span>افتح الدليل</span>
+      </button>
+      <button className="ibtn" onClick={dismiss} title="إخفاء">
+        <X size={16} />
+      </button>
+    </div>
+  )
+}
+
 export function Home() {
   const uiTheme = useEditor((s) => s.uiTheme)
   const brand = useEditor((s) => s.brand)
@@ -248,6 +288,9 @@ export function Home() {
         <div className="home-actions">
           <button className="ibtn" title="لوحة الأوامر (Ctrl+K)" onClick={() => useEditor.setState({ dialog: 'commands' })}>
             <Command size={18} />
+          </button>
+          <button className="ibtn" title="دليل البرنامج" onClick={() => useEditor.setState({ dialog: 'guide' })}>
+            <BookOpen size={18} />
           </button>
           <Menu trigger={<FolderOpen size={18} />} align="end">
             {(close) => (
@@ -303,6 +346,7 @@ export function Home() {
       </header>
 
       <main className="home-body">
+        <Welcome />
         <section className="hero">
           <div>
             <h1>{def.name}</h1>

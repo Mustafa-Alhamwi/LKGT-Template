@@ -161,6 +161,8 @@ function Editable({
   const commit = () => {
     if (done.current || !ref.current) return
     done.current = true
+    // innerText يطبّق text-transform (أحرف كبيرة) — نعطّله لنحفظ ما كتبه المستخدم حرفياً
+    ref.current.style.textTransform = 'none'
     onCommit(ref.current.innerText.replace(/\n$/, ''))
   }
   return (

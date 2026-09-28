@@ -10,6 +10,17 @@ import { AI_MODELS, testClaude } from '../lib/claude'
 import { canInstall, installApp, onInstallChange } from '../lib/pwa'
 
 export function Modal({ title, children, onClose, wide }: { title: string; children: React.ReactNode; onClose: () => void; wide?: boolean | 'xl' }) {
+  // Esc يغلق النافذة (إلا أثناء كتابة نص داخل حقل)
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return
+      const t = e.target as HTMLElement | null
+      if (t && (t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+      onClose()
+    }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [onClose])
   return (
     <div className="modal-back" onPointerDown={onClose}>
       <div className={`modal ${wide === 'xl' ? 'xl' : wide ? 'wide' : ''}`} onPointerDown={(e) => e.stopPropagation()}>

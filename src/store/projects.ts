@@ -91,6 +91,7 @@ export async function saveProjectNow(withThumb = false): Promise<void> {
   const data: ProjectData = { id: s.projectId, name, created: s.projectCreated, slides, slideIndex: s.slideIndex }
   await idbSet(s.projectId, data, dataStore)
   await idbSet(s.projectId, meta, metaStore)
+  useEditor.setState({ savedAt: Date.now() })
 }
 
 /** ينشئ مشروعاً محفوظاً من تصاميم جاهزة دون فتحه (للتوليد الجماعي) */
@@ -268,6 +269,13 @@ export function startAutosave() {
     clearTimeout(timer)
     timer = setTimeout(() => void saveProjectNow(Date.now() - thumbAt > 20000), 1800)
   })
+  // حفظ فوري عند إخفاء الصفحة أو إغلاقها
+  const flush = () => {
+    clearTimeout(timer)
+    void saveProjectNow()
+  }
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'hidden' && flush())
+  window.addEventListener('pagehide', flush)
   clearInterval(verTimer)
   let lastSig = ''
   verTimer = setInterval(() => {

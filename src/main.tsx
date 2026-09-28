@@ -10,18 +10,22 @@ import '@fontsource/tajawal/900.css'
 import './styles/app.css'
 import './styles/poster.css'
 import App from './App'
+import { ErrorBoundary } from './ui/ErrorBoundary'
 import { bootFonts } from './lib/fontBoot'
 import { initPwa } from './lib/pwa'
 import { installApi } from './lib/api'
+import { startAutosave } from './store/projects'
 
 bootFonts()
 initPwa()
 installApi()
-import('./store/projects').then((m) => m.startAutosave())
+startAutosave()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </StrictMode>,
 )
 

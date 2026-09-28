@@ -14,6 +14,7 @@ import { KitsDialog } from './panels/KitsDialog'
 import { CarouselDialog } from './panels/CarouselDialog'
 import { CheckDialog, PaletteDialog, ReferenceDialog, SuggestDialog } from './panels/SmartDialogs'
 import { CopyDialog } from './panels/CopyDialog'
+import { saveVersion } from './store/projects'
 
 const CutoutStudio = lazy(() => import('./cutout/CutoutStudio'))
 const RetouchDialog = lazy(() => import('./panels/RetouchDialog'))
@@ -21,6 +22,7 @@ const ExportDialog = lazy(() => import('./panels/ExportDialog'))
 const BatchDialog = lazy(() => import('./panels/BatchDialog'))
 const CalendarDialog = lazy(() => import('./panels/CalendarDialog'))
 const ReviewDialog = lazy(() => import('./panels/ReviewDialog'))
+const GuideDialog = lazy(() => import('./panels/GuideDialog'))
 
 function Toasts() {
   const toasts = useEditor((s) => s.toasts)
@@ -97,7 +99,7 @@ function useShortcuts() {
       if (mod && e.code === 'KeyS') {
         e.preventDefault()
         if (s.view === 'editor') {
-          void import('./store/projects').then((m) => m.saveVersion('يدوي'))
+          void saveVersion('يدوي')
           toast('تم حفظ نسخة من المشروع — كل التعديلات تُحفظ تلقائياً أيضاً', 'ok', 2400)
         }
         return
@@ -195,6 +197,11 @@ export default function App() {
       {dialog === 'suggest' && <SuggestDialog />}
       {dialog === 'reference' && <ReferenceDialog />}
       {dialog === 'copy' && <CopyDialog />}
+      {dialog === 'guide' && (
+        <Suspense fallback={null}>
+          <GuideDialog />
+        </Suspense>
+      )}
       {dialog === 'review' && (
         <Suspense fallback={null}>
           <ReviewDialog />

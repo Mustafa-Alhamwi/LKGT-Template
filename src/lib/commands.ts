@@ -109,6 +109,7 @@ export function buildCommands(): Command[] {
     { id: 'safe', label: 'إظهار / إخفاء المناطق الآمنة', group: 'عرض', run: () => setPrefs({ showSafe: !useEditor.getState().prefs.showSafe }), enabled: inEditor },
     { id: 'theme', label: 'تبديل مظهر البرنامج (فاتح/داكن)', group: 'عرض', run: () => useEditor.setState({ uiTheme: useEditor.getState().uiTheme === 'dark' ? 'light' : 'dark' }) },
     { id: 'settings', label: 'الإعدادات', group: 'أدوات', keys: 'Ctrl+,', run: () => useEditor.setState({ dialog: 'settings' }) },
+    { id: 'guide', label: 'دليل البرنامج', group: 'أدوات', keywords: 'مساعدة تعليمات help', run: () => useEditor.setState({ dialog: 'guide' }) },
     { id: 'shortcuts', label: 'الاختصارات', group: 'أدوات', keys: 'Ctrl+/', run: () => useEditor.setState({ dialog: 'shortcuts' }) },
     { id: 'addText', label: 'إضافة نص', group: 'إضافة', run: () => useEditor.setState({ library_: 'text' }), enabled: inEditor },
     { id: 'addSticker', label: 'إضافة ملصق أو أيقونة', group: 'إضافة', run: () => useEditor.setState({ library_: 'stickers' }), enabled: inEditor },

@@ -67,6 +67,7 @@ export type Dialog =
   | 'commands'
   | 'carousel'
   | 'palette'
+  | 'guide'
 export type LibraryPanel = null | 'text' | 'stickers' | 'qr' | 'images' | 'products'
 
 export interface TextPreset {
@@ -180,6 +181,8 @@ export interface EditorState extends Persisted {
   homeCat: CategoryId
   /** لوحة الخصائص ظاهرة (تُستخدم فقط في الشاشات الضيقة) */
   inspOpen: boolean
+  /** آخر مرة حُفظ فيها المشروع تلقائياً */
+  savedAt: number
 }
 
 const LS_KEY = 'lkgt-studio:v3'
@@ -304,6 +307,7 @@ export const useEditor = create<EditorState>(() => ({
   clip: null,
   homeCat: 'ads',
   inspOpen: typeof window === 'undefined' ? true : window.innerWidth > 1000,
+  savedAt: 0,
 }))
 
 const get = useEditor.getState

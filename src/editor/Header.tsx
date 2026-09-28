@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { TOOL_ITEMS } from './toolItems'
 import {
-  ArrowRight, ChevronDown, ChevronLeft, ChevronRight, Command, Copy, Download, FileArchive, FilePlus2, FolderOpen, History, Images, LayoutGrid, Moon, Palette,
+  ArrowRight, Check, ChevronDown, ChevronLeft, ChevronRight, Command, Copy, Download, FileArchive, FilePlus2, FolderOpen, History, Images, LayoutGrid, Moon, Palette,
   Redo2, RotateCcw, Ruler, Save, Settings, Eraser, Sun, Undo2, Keyboard, WandSparkles, MoreHorizontal, PanelRight,
 } from 'lucide-react'
 import { LkgtLogo } from '../brand/LkgtLogo'
@@ -35,6 +35,23 @@ import { categoryOf } from '../model/categories'
 function FmtIcon({ w, h }: { w: number; h: number }) {
   const k = 18 / Math.max(w, h)
   return <i className="fmt-ic" style={{ width: Math.max(8, w * k), height: Math.max(8, h * k) }} />
+}
+
+/** مؤشر الحفظ التلقائي: يظهر لثوانٍ بعد كل حفظ */
+function SavedBadge() {
+  const at = useEditor((s) => s.savedAt)
+  const [, tick] = useState(0)
+  useEffect(() => {
+    if (!at) return
+    const t = setTimeout(() => tick((x) => x + 1), 3800)
+    return () => clearTimeout(t)
+  }, [at])
+  const on = !!at && Date.now() - at < 3600
+  return (
+    <span className={`saved hide-md ${on ? 'on' : ''}`} title="تُحفظ تعديلاتك تلقائياً على هذا الجهاز">
+      <Check size={13} /> محفوظ
+    </span>
+  )
 }
 
 function SizeMenu() {
@@ -135,6 +152,7 @@ export function EditorHeader() {
           <ChevronLeft size={18} />
         </button>
         <input className="proj-name hide-md" value={projectName} placeholder="اسم المشروع…" onChange={(e) => renameProject(e.target.value)} title="اسم المشروع" />
+        <SavedBadge />
       </div>
 
       <div className="ed-end">
