@@ -13,6 +13,7 @@ import { VersionsDialog } from './panels/VersionsDialog'
 import { KitsDialog } from './panels/KitsDialog'
 import { CarouselDialog } from './panels/CarouselDialog'
 import { CheckDialog, PaletteDialog, ReferenceDialog, SuggestDialog } from './panels/SmartDialogs'
+import { CopyDialog } from './panels/CopyDialog'
 
 const CutoutStudio = lazy(() => import('./cutout/CutoutStudio'))
 
@@ -188,6 +189,7 @@ export default function App() {
       {dialog === 'palette' && <PaletteDialog />}
       {dialog === 'suggest' && <SuggestDialog />}
       {dialog === 'reference' && <ReferenceDialog />}
+      {dialog === 'copy' && <CopyDialog />}
       {dialog === 'cutout' && (
         <Suspense fallback={null}>
           <CutoutStudio />

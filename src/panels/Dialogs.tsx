@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, ArrowLeftRight, Check, HardDriveDownload, Trash2, Upload, X } from 'lucide-react'
+import { AlertTriangle, ArrowLeftRight, Check, Eye, EyeOff, HardDriveDownload, Loader2, Trash2, Upload, X } from 'lucide-react'
 import { saveAsTemplate, setPrefs, toast, useEditor } from '../store/editor'
 import { buildCommands, formatKeys, keysFor } from '../lib/commands'
 import { AR_WEIGHTS, LAT_WEIGHTS, UI_WEIGHTS, canQueryLocalFonts, clearImportedFonts, importFontFiles, importFromDevice } from '../lib/fonts'
 import { Btn, Chips } from '../ui/kit'
 import { pickFile } from '../lib/importer'
 import { reloadFonts } from '../lib/fontBoot'
+import { AI_MODELS, testClaude } from '../lib/claude'
 
-export function Modal({ title, children, onClose, wide }: { title: string; children: React.ReactNode; onClose: () => void; wide?: boolean }) {
+export function Modal({ title, children, onClose, wide }: { title: string; children: React.ReactNode; onClose: () => void; wide?: boolean | 'xl' }) {
   return (
     <div className="modal-back" onPointerDown={onClose}>
-      <div className={`modal ${wide ? 'wide' : ''}`} onPointerDown={(e) => e.stopPropagation()}>
+      <div className={`modal ${wide === 'xl' ? 'xl' : wide ? 'wide' : ''}`} onPointerDown={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <h3>{title}</h3>
           <button className="ibtn" onClick={onClose}>
@@ -127,9 +128,14 @@ function BrandTab() {
 
 function AiTab() {
   const q = useEditor((s) => s.removalQuality)
+  const prefs = useEditor((s) => s.prefs)
+  const [show, setShow] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const model = AI_MODELS.find((m) => m.id === prefs.aiModel)
   return (
     <div className="settings-block">
-      <p>التفريغ الذكي يتم بالكامل داخل متصفحك (لا تُرفع الصور لأي خادم). أول مرة يُحمَّل النموذج من الإنترنت ثم يُحفظ.</p>
+      <h4 className="ftitle">التفريغ الذكي للمنتجات</h4>
+      <p>التفريغ يتم بالكامل داخل متصفحك (لا تُرفع الصور لأي خادم). أول مرة يُحمَّل النموذج من الإنترنت ثم يُحفظ.</p>
       <Chips
         value={q}
         options={[
@@ -141,6 +147,53 @@ function AiTab() {
       <p className="hint">
         للعمل بدون إنترنت نهائياً: شغّل <code>npm run model:offline</code> مرة واحدة فينسخ النموذج إلى <code>public/imgly</code>.
       </p>
+      <h4 className="ftitle" style={{ marginTop: 6 }}>مساعد الكتابة بـ Claude (اختياري)</h4>
+      <p>
+        بدون مفتاح يعمل مساعد الكتابة بالوضع المحلي السريع. لتفعيل وضع <b>Claude</b> الأذكى أدخل مفتاح API الخاص بك (من console.anthropic.com).
+      </p>
+      <div className="ai-key">
+        <input
+          className="txi ltr"
+          dir="ltr"
+          type={show ? 'text' : 'password'}
+          placeholder="sk-ant-…"
+          autoComplete="off"
+          spellCheck={false}
+          value={prefs.aiKey}
+          onChange={(e) => setPrefs({ aiKey: e.target.value.trim() })}
+        />
+        <button type="button" className="ibtn" title={show ? 'إخفاء' : 'إظهار'} onClick={() => setShow(!show)}>
+          {show ? <EyeOff size={16} /> : <Eye size={16} />}
+        </button>
+        <Btn
+          disabled={!prefs.aiKey || testing}
+          icon={testing ? <Loader2 size={15} className="spin" /> : <Check size={15} />}
+          onClick={async () => {
+            setTesting(true)
+            try {
+              await testClaude(prefs.aiKey, prefs.aiModel)
+              toast('الاتصال بـ Claude يعمل ✓', 'ok')
+            } catch (e) {
+              toast(String((e as Error).message), 'error', 6000)
+            } finally {
+              setTesting(false)
+            }
+          }}
+        >
+          اختبار
+        </Btn>
+        {prefs.aiKey && (
+          <Btn variant="ghost" icon={<Trash2 size={15} />} onClick={() => setPrefs({ aiKey: '' })}>
+            حذف
+          </Btn>
+        )}
+      </div>
+      <Chips value={model ? prefs.aiModel : ''} wrap options={AI_MODELS.map((m) => ({ value: m.id, label: m.label, title: m.hint }))} onChange={(v) => setPrefs({ aiModel: v })} />
+      <p className="hint">{model?.hint ?? 'نموذج مخصص'}</p>
+      <div className="alert">
+        <AlertTriangle size={16} />
+        <span>المفتاح يُحفظ في متصفح هذا الجهاز فقط ويُرسَل مباشرةً إلى Anthropic — لا يمر عبر أي خادم آخر ولا يدخل في ملفات المشاريع أو القوالب. لا تستخدم مفتاحك على جهاز مشترك.</span>
+      </div>
     </div>
   )
 }
@@ -161,7 +214,7 @@ export function SettingsDialog() {
         options={[
           { value: 'fonts', label: 'الخطوط' },
           { value: 'brand', label: 'الهوية الثابتة' },
-          { value: 'ai', label: 'التفريغ الذكي' },
+          { value: 'ai', label: 'الذكاء الاصطناعي' },
         ]}
         onChange={setTab}
       />

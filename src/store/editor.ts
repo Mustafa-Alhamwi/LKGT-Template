@@ -113,7 +113,7 @@ export interface Prefs {
 
 const DEFAULT_PREFS: Prefs = {
   aiKey: '',
-  aiModel: 'claude-haiku-4-5-20251001',
+  aiModel: 'claude-haiku-4-5',
   nameTemplate: 'LKGT - {title} - {template}',
   sizesToExport: ['post', 'story', 'square'],
   shortcuts: {},
