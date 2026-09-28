@@ -6,6 +6,7 @@ import { useCutout } from '../../lib/cutout'
 import { autoPlacement, coverPlacement, fitWidthPlacement, productBoxOf, setProductBox } from '../../poster/geometry'
 import { importImage, pickFile } from '../../lib/importer'
 import { PhotoControls, ShapeControls } from './design'
+import { canvasOf } from '../../model/types'
 
 export function openCutoutStudio() {
   useEditor.setState({ dialog: 'cutout' })
@@ -81,9 +82,10 @@ export function SceneControls() {
   const scene = useEditor((s) => s.design.content.scene)
   const product = useEditor((s) => s.design.content.product)
   const info = useAsset(scene?.assetId)
+  const cv = useEditor((s) => canvasOf(s.design))
   if (!scene || !info) return null
-  const place = scene.place ?? autoPlacement(info.w, info.h)
-  const cover = coverPlacement(info.w, info.h)
+  const place = scene.place ?? autoPlacement(info.w, info.h, cv)
+  const cover = coverPlacement(info.w, info.h, cv)
   const zoom = place.w / cover.w
   return (
     <>
@@ -129,10 +131,10 @@ export function SceneControls() {
           </Btn>
         </div>
         <div className="row-btns">
-          <Btn small icon={<Scan size={14} />} onClick={() => changeContent((c) => void (c.scene!.place = coverPlacement(info.w, info.h)))}>
+          <Btn small icon={<Scan size={14} />} onClick={() => changeContent((c) => void (c.scene!.place = coverPlacement(info.w, info.h, cv)))}>
             ملء
           </Btn>
-          <Btn small icon={<Layers size={14} />} onClick={() => changeContent((c) => void (c.scene!.place = fitWidthPlacement(info.w, info.h)))}>
+          <Btn small icon={<Layers size={14} />} onClick={() => changeContent((c) => void (c.scene!.place = fitWidthPlacement(info.w, info.h, cv)))}>
             ملاءمة العرض
           </Btn>
           <Btn small onClick={() => changeContent((c) => void (c.scene!.place = null))}>
@@ -147,7 +149,7 @@ export function SceneControls() {
           step={0.01}
           onChange={(z) =>
             changeContent((c) => {
-              const p = c.scene!.place ?? autoPlacement(info.w, info.h)
+              const p = c.scene!.place ?? autoPlacement(info.w, info.h, cv)
               const h = (p.w * info.h) / info.w
               const w = cover.w * z
               c.scene!.place = { x: p.x + p.w / 2 - w / 2, y: p.y + h / 2 - (w * info.h) / info.w / 2, w }

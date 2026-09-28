@@ -53,6 +53,8 @@ export function backdropCss(b: BackdropStyle): React.CSSProperties {
       }
     case 'split':
       return { background: `linear-gradient(168deg, ${color} 0 54%, ${color2} 54% 100%)` }
+    case 'vsplit':
+      return { background: `linear-gradient(90deg, ${color} 0 50%, ${color2} 50% 100%)` }
     case 'aurora':
       return {
         background: [

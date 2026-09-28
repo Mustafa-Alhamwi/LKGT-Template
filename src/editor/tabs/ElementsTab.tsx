@@ -1,8 +1,10 @@
-import { Eye, EyeOff, ImagePlus, Layers, Plus, Scissors, Settings2, Trash2 } from 'lucide-react'
-import { Btn, Group, IconBtn, TextArea } from '../../ui/kit'
+import { Eye, EyeOff, ImagePlus, Layers, Package, Plus, Scissors, Settings2, Trash2 } from 'lucide-react'
+import { Btn, Chips, Group, IconBtn, TextArea } from '../../ui/kit'
 import { addExtraText, changeContent, changeStyle, getTextStyle, removeExtraText, select, useEditor } from '../../store/editor'
-import { TEXT_HINTS, TEXT_LABELS, useTextValue } from '../controls/text'
-import { PartnerPicker, DECOR_KINDS, addDecor } from '../controls/design'
+import { LayersPanel } from '../Layers'
+import { saveProductToLibrary } from '../../store/library'
+import { useCat, useTextValue } from '../controls/text'
+import { PartnerPicker } from '../controls/design'
 import { openCutoutStudio } from '../controls/product'
 import { importImage, pickFile } from '../../lib/importer'
 import { useAsset } from '../../lib/assets'
@@ -96,28 +98,36 @@ function ImageCard() {
 
 export function ElementsTab() {
   const order = useEditor((s) => s.design.style.text.order)
+  const cat = useCat()
   const extras = useEditor((s) => s.design.content.extras ?? [])
-  const decor = useEditor((s) => s.design.style.decor)
+  const answer = useEditor((s) => s.design.content.answer ?? null)
   const product = useEditor((s) => s.design.content.product)
-  const shapeKind = useEditor((s) => s.design.style.shape.kind)
-  const selection = useEditor((s) => s.selection)
-  const layerRow = (key: string, label: string, sel: Selection, visible: boolean, toggle?: () => void, remove?: () => void) => (
-    <li key={key} className={`${visible ? '' : 'off'} ${isSel(selection, sel) ? 'active' : ''}`}>
-      {toggle ? <IconBtn icon={visible ? <Eye size={15} /> : <EyeOff size={15} />} title={visible ? 'إخفاء' : 'إظهار'} onClick={toggle} /> : <span className="ibtn ph" />}
-      <button className="row-name" onClick={() => select(sel)}>
-        {label}
-      </button>
-      {remove && <IconBtn danger icon={<Trash2 size={14} />} title="حذف" onClick={remove} />}
-    </li>
-  )
   return (
     <>
-      <Group title="الصورة">
+      <Group title={cat.hasProduct ? 'الصورة' : 'صورة الخلفية (اختياري)'}>
         <ImageCard />
+        {product && (
+          <Btn small icon={<Package size={14} />} onClick={() => saveProductToLibrary(product)}>
+            حفظ المنتج في مكتبتي
+          </Btn>
+        )}
       </Group>
-      <Group title="النصوص" right={<Btn small icon={<Plus size={14} />} onClick={addExtraText}>نص جديد</Btn>}>
+      {cat.answers && (
+        <Group title="الإجابة الصحيحة" hint="تظهر مميّزة في الخيارين على التصميم (استخدم «بدون» لمنشور السؤال).">
+          <Chips<string>
+            value={answer ?? ''}
+            options={[
+              { value: '', label: 'بدون (سؤال)' },
+              { value: 'a', label: cat.answers.a },
+              { value: 'b', label: cat.answers.b },
+            ]}
+            onChange={(v) => changeContent((c) => void (c.answer = (v || null) as 'a' | null))}
+          />
+        </Group>
+      )}
+      <Group title="النصوص" right={<Btn small icon={<Plus size={14} />} onClick={() => addExtraText()}>نص جديد</Btn>}>
         {order.map((k: TextKey) => (
-          <TextRow key={k} sel={{ kind: 'text', key: k }} label={TEXT_LABELS[k]} hint={TEXT_HINTS[k]} />
+          <TextRow key={k} sel={{ kind: 'text', key: k }} label={cat.labels[k]} hint={cat.hints[k]} />
         ))}
         {extras.map((e, i) => (
           <TextRow key={e.id} sel={{ kind: 'extra', id: e.id }} label={`نص إضافي ${i + 1}`} />
@@ -126,26 +136,8 @@ export function ElementsTab() {
       <Group title="لوغو الشريك">
         <PartnerPicker />
       </Group>
-      <Group title="الطبقات" right={<Layers size={15} className="muted" />}>
-        <ul className="rows">
-          {layerRow('tb', 'كتلة النصوص', { kind: 'textBlock' }, true)}
-          {product && layerRow('prod', 'المنتج المفرّغ', { kind: 'product' }, product.visible, () => changeContent((c) => void (c.product!.visible = !product.visible)))}
-          {layerRow('shape', 'الشكل تحت المنتج' + (shapeKind === 'none' ? ' (بدون)' : ''), { kind: 'shape' }, shapeKind !== 'none')}
-          {decor.map((d) =>
-            layerRow(
-              d.id,
-              DECOR_KINDS.find((k) => k.value === d.kind)?.label ?? d.kind,
-              { kind: 'decor', id: d.id },
-              d.visible,
-              () => changeStyle((s) => void (s.decor.find((x) => x.id === d.id)!.visible = !d.visible)),
-              () => changeStyle((s) => void (s.decor = s.decor.filter((x) => x.id !== d.id))),
-            ),
-          )}
-          {layerRow('contact', 'شريط التواصل', { kind: 'contact' }, true)}
-        </ul>
-        <Btn small icon={<Plus size={14} />} onClick={() => addDecor('blobs')}>
-          إضافة زخرفة
-        </Btn>
+      <Group title="الطبقات" right={<Layers size={15} className="muted" />} hint="اسحب صفوف العناصر المضافة لإعادة ترتيبها، والقفل يمنع تحريك العنصر بالنقر على التصميم.">
+        <LayersPanel />
       </Group>
     </>
   )

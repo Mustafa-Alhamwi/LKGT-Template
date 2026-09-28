@@ -1,7 +1,9 @@
-import { useLayoutEffect, useRef } from 'react'
+import { useId, useLayoutEffect, useRef } from 'react'
 import type { AdTexts, ExtraText, Selection, TextBlockStyle, TextKey, TextStyle } from '../model/types'
 import { isSel, useEdit } from './EditContext'
-import { fitLines, parseRich } from '../lib/textFit'
+import { fitLines, measure100, parseRich, stripMarks } from '../lib/textFit'
+import { showWhenOk } from '../model/showWhen'
+import { useAsset } from '../lib/assets'
 import { fontStack, isArabicText } from '../lib/fonts'
 import { withAlpha } from '../lib/color'
 
@@ -38,9 +40,17 @@ function textValue(texts: AdTexts, k: TextKey): string {
   return texts[k] ?? ''
 }
 
-function effectStyle(st: TextStyle): React.CSSProperties {
+function effectStyle(st: TextStyle, fillUrl?: string): React.CSSProperties {
   const o: React.CSSProperties = {}
-  if (st.gradient) {
+  if (fillUrl) {
+    o.backgroundImage = `url("${fillUrl}")`
+    o.backgroundSize = 'cover'
+    o.backgroundPosition = 'center'
+    o.WebkitBackgroundClip = 'text'
+    o.backgroundClip = 'text'
+    o.color = 'transparent'
+    o.WebkitTextFillColor = 'transparent'
+  } else if (st.gradient) {
     o.backgroundImage = `linear-gradient(${st.gradAngle ?? 90}deg, ${st.color}, ${st.color2 ?? st.color})`
     o.WebkitBackgroundClip = 'text'
     o.backgroundClip = 'text'
@@ -71,11 +81,13 @@ function Lines({
   sizes,
   st,
   align,
+  fillUrl,
 }: {
   lines: string[]
   sizes: number[]
   st: TextStyle
   align: 'center' | 'right' | 'left'
+  fillUrl?: string
 }) {
   return (
     <>
@@ -96,7 +108,10 @@ function Lines({
               color: st.color,
               whiteSpace: 'pre',
               textAlign: align,
-              ...effectStyle(st),
+              textDecoration: st.strike ? 'line-through' : undefined,
+              textDecorationThickness: st.strike ? `${Math.max(3, sizes[i] * 0.07)}px` : undefined,
+              textDecorationColor: st.strike ? st.accent : undefined,
+              ...effectStyle(st, fillUrl),
             }}
           >
             {line.trim() === '' ? ' ' : parseRich(line).map((s, j) => (s.accent ? <span key={j} style={{ color: st.accent }}>{s.text}</span> : <span key={j}>{s.text}</span>))}
@@ -172,6 +187,56 @@ function Editable({
   )
 }
 
+/** نص على منحنى (قوس) — SVG textPath */
+function CurveText({ value, st, w, fontsVersion }: { value: string; st: TextStyle; w: number; fontsVersion: number }) {
+  const uid = useId().replace(/:/g, '')
+  const flat = value.replace(/\n+/g, ' ')
+  const plain = stripMarks(flat) || ' '
+  const sag = ((st.curve ?? 0) / 100) * w * 0.42
+  const arc = Math.sqrt(w * w + (16 / 3) * sag * sag)
+  const w100 = measure100(plain, { weightAr: st.weightAr, weightLat: st.weightLat, tracking: st.tracking, uppercase: st.uppercase }, fontsVersion)
+  const size = Math.max(8, Math.min(st.size, (0.94 * arc * 100) / Math.max(w100, 1)))
+  const yb = size * 1.15 + Math.max(0, sag)
+  const h = yb + Math.max(0, -sag) + size * 0.55
+  const path = `M0 ${yb} Q${w / 2} ${yb - 2 * sag} ${w} ${yb}`
+  const ar = isArabicText(plain)
+  const fill = st.gradient ? `url(#g${uid})` : st.color
+  const segs = parseRich(st.uppercase ? flat.toUpperCase() : flat)
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ display: 'block', overflow: 'visible', ...effectStyle({ ...st, gradient: false, strokeW: 0 }) }}>
+      <defs>
+        <path id={`p${uid}`} d={path} />
+        {st.gradient && (
+          <linearGradient id={`g${uid}`} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={w} y2="0" gradientTransform={`rotate(${(st.gradAngle ?? 90) - 90} ${w / 2} ${h / 2})`}>
+            <stop offset="0" stopColor={st.color} />
+            <stop offset="1" stopColor={st.color2 ?? st.color} />
+          </linearGradient>
+        )}
+      </defs>
+      <text
+        fontFamily={fontStack(plain, st.weightLat)}
+        fontWeight={st.weightAr}
+        fontSize={size}
+        fill={fill}
+        stroke={(st.strokeW ?? 0) > 0 ? (st.strokeColor ?? '#fff') : undefined}
+        strokeWidth={st.strokeW ?? 0}
+        paintOrder="stroke fill"
+        direction={ar ? 'rtl' : 'ltr'}
+        letterSpacing={st.tracking ? `${st.tracking}em` : undefined}
+        style={{ whiteSpace: 'pre' }}
+      >
+        <textPath href={`#p${uid}`} startOffset="50%" textAnchor="middle">
+          {segs.map((sg, i) => (
+            <tspan key={i} fill={sg.accent ? st.accent : fill}>
+              {sg.text}
+            </tspan>
+          ))}
+        </textPath>
+      </text>
+    </svg>
+  )
+}
+
 function decoBox(st: TextStyle): React.CSSProperties {
   const d = st.decoStyle
   const sz = d.shadowSize ?? 1
@@ -221,12 +286,15 @@ interface ItemProps {
   gap: number
   fontsVersion: number
   features?: boolean
+  curved?: boolean
 }
 
 const resolveAlign = (st: TextStyle, block: 'center' | 'right' | 'left') => (st.align && st.align !== 'inherit' ? st.align : block)
 
-function TextItem({ id, sel, st, value, innerW, align, first, gap, fontsVersion, features }: ItemProps) {
+function TextItem({ id, sel, st, value, innerW, align, first, gap, fontsVersion, features, curved }: ItemProps) {
   const edit = useEdit()
+  const fillAsset = useAsset(st.fillImage)
+  const fillUrl = st.fillImage ? fillAsset?.url : undefined
   const editing = edit?.editing === id
   const selected = edit && isSel(edit.selection, sel)
   const d = st.decoStyle
@@ -250,20 +318,22 @@ function TextItem({ id, sel, st, value, innerW, align, first, gap, fontsVersion,
     : {}
 
   let content: React.ReactNode
-  if (editing) {
+  if (curved && !editing && !features) {
+    content = <CurveText value={value} st={st} w={innerW} fontsVersion={fontsVersion} />
+  } else if (editing) {
     content = <Editable value={value} st={st} size={sizes[0] ?? st.size} align={align} onCommit={(v) => edit!.commitText(id, v)} />
   } else if (features) {
     content = (
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, justifyContent: flexAlign, width: '100%' }} dir="rtl">
         {lines.map((line, i) => (
           <div key={i} style={{ ...decoBox(st), display: 'inline-block' }}>
-            <Lines lines={[line]} sizes={[st.size]} st={st} align="center" />
+            <Lines lines={[line]} sizes={[st.size]} st={st} align="center" fillUrl={fillUrl} />
           </div>
         ))}
       </div>
     )
   } else {
-    const body = <Lines lines={lines} sizes={sizes} st={st} align={align} />
+    const body = <Lines lines={lines} sizes={sizes} st={st} align={align} fillUrl={fillUrl} />
     switch (st.deco) {
       case 'rules':
         content = (
@@ -323,11 +393,13 @@ function TextItem({ id, sel, st, value, innerW, align, first, gap, fontsVersion,
     <div
       className="lk-ti"
       data-key={id}
+      data-eid={`text:${id}`}
       {...handlers}
       style={{
         position: 'relative',
         marginTop: (first ? 0 : gap) + st.marginTop,
         opacity: st.opacity,
+        mixBlendMode: st.blend && st.blend !== 'normal' ? st.blend : undefined,
         alignSelf: full || editing ? 'stretch' : flexAlign,
         display: 'flex',
         flexDirection: 'column',
@@ -361,11 +433,18 @@ function FreeText({ id, sel, st, value, fontsVersion, features }: { id: string; 
         zIndex: 3,
       }}
     >
-      <TextItem id={id} sel={sel} st={st} value={value} innerW={st.fw ?? 600} align={align} first gap={0} fontsVersion={fontsVersion} features={features} />
-      {edit && selected && edit.editing !== id && (
+      <TextItem id={id} sel={sel} st={st} value={value} innerW={st.fw ?? 600} align={align} first gap={0} fontsVersion={fontsVersion} features={features} curved={!!st.curve} />
+      {edit && selected && edit.editing !== id && !st.locked && (
         <>
           <div className="lk-handle lk-handle-l" onPointerDown={(e) => edit.startDrag(sel, e, { handle: 'left' })} />
           <div className="lk-handle lk-handle-r" onPointerDown={(e) => edit.startDrag(sel, e, { handle: 'right' })} />
+          <div className="lk-tf-stem" style={{ height: 36 / edit.scale, top: -44 / edit.scale, width: 3 / edit.scale }} />
+          <div
+            className="lk-tf rot"
+            style={{ width: 24 / edit.scale, height: 24 / edit.scale, borderWidth: 3 / edit.scale, top: -44 / edit.scale - 12 / edit.scale, cursor: 'grab' }}
+            title="تدوير"
+            onPointerDown={(e) => edit.startDrag(sel, e, { handle: 'rot' })}
+          />
         </>
       )}
     </div>
@@ -377,9 +456,10 @@ interface Props {
   texts: AdTexts
   extras: ExtraText[]
   fontsVersion: number
+  answer?: 'a' | 'b' | null
 }
 
-export function TextBlock({ tb, texts, extras, fontsVersion }: Props) {
+export function TextBlock({ tb, texts, extras, fontsVersion, answer }: Props) {
   const edit = useEdit()
   const p = tb.panel
   const pad = p.kind !== 'none' ? p.pad : 0
@@ -388,6 +468,7 @@ export function TextBlock({ tb, texts, extras, fontsVersion }: Props) {
     const st = tb.items[k]
     if (!st?.visible) return false
     if (edit?.editing === k) return true
+    if (!showWhenOk(st.showWhen, answer)) return false
     return textValue(texts, k).trim() !== ''
   }
   const flow = tb.order.filter((k) => shown(k) && !tb.items[k].free)
@@ -414,6 +495,7 @@ export function TextBlock({ tb, texts, extras, fontsVersion }: Props) {
       {(flow.length > 0 || edit) && (
         <div
           className="lk-textblock"
+          data-eid="block"
           style={{
             position: 'absolute',
             left: tb.x,
@@ -456,7 +538,7 @@ export function TextBlock({ tb, texts, extras, fontsVersion }: Props) {
         <FreeText key={k} id={k} sel={{ kind: 'text', key: k }} st={tb.items[k]} value={textValue(texts, k)} fontsVersion={fontsVersion} features={k === 'features'} />
       ))}
       {extras
-        .filter((e) => e.style.visible !== false)
+        .filter((e) => e.style.visible !== false && showWhenOk(e.style.showWhen, answer))
         .map((e) => (
           <FreeText key={e.id} id={e.id} sel={{ kind: 'extra', id: e.id }} st={e.style} value={e.text} fontsVersion={fontsVersion} />
         ))}

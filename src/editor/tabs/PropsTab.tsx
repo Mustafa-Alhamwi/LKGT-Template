@@ -4,9 +4,12 @@ import { select, useEditor } from '../../store/editor'
 import { BlockControls, TextControls } from '../controls/text'
 import { ProductControls, SceneControls } from '../controls/product'
 import { ContactControls, DecorControls, LogoControls, ShapeControls } from '../controls/design'
+import { MultiControls } from '../controls/multi'
 
 export function PropsTab() {
   const sel = useEditor((s) => s.selection)
+  const multi = useEditor((s) => s.multi)
+  if (multi.length > 1) return <MultiControls />
   if (!sel) {
     return (
       <Empty icon={<MousePointerClick size={30} />} title="لم تحدد عنصراً" text="انقر على أي عنصر في التصميم لتعديل خصائصه هنا، أو اختر من الأزرار:">

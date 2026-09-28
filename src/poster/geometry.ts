@@ -1,5 +1,5 @@
-import { POSTER_H, POSTER_W } from '../model/types'
-import type { Placement, ProductContent, SceneContent, TemplateStyle } from '../model/types'
+import { DEFAULT_CANVAS, canvasOf } from '../model/types'
+import type { Canvas, Placement, ProductContent, SceneContent, TemplateStyle } from '../model/types'
 import type { AssetInfo } from '../lib/assets'
 import { assetInfoSync } from '../lib/assets'
 import { cutoutSync } from '../lib/cutout'
@@ -13,24 +13,30 @@ export interface Rect {
   h: number
 }
 
-export function coverPlacement(w: number, h: number): Placement {
-  const s = Math.max(POSTER_W / w, POSTER_H / h)
-  return { x: (POSTER_W - w * s) / 2, y: (POSTER_H - h * s) / 2, w: w * s }
+export function coverPlacement(w: number, h: number, c: Canvas = DEFAULT_CANVAS): Placement {
+  const s = Math.max(c.w / w, c.h / h)
+  return { x: (c.w - w * s) / 2, y: (c.h - h * s) / 2, w: w * s }
 }
 
-export function fitWidthPlacement(w: number, h: number): Placement {
-  const s = POSTER_W / w
-  return { x: 0, y: POSTER_H - h * s, w: POSTER_W }
+export function fitWidthPlacement(w: number, h: number, c: Canvas = DEFAULT_CANVAS): Placement {
+  const s = c.w / w
+  return { x: 0, y: c.h - h * s, w: c.w }
 }
 
 /** الوضع التلقائي: الصور الطولية تملأ البوستر، والعريضة/المربعة تأخذ العرض كاملاً وتلتصق بالأسفل (والتدرج يذيب حافتها العليا) */
-export function autoPlacement(w: number, h: number): Placement {
-  return w / h > 0.9 ? fitWidthPlacement(w, h) : coverPlacement(w, h)
+export function autoPlacement(w: number, h: number, c: Canvas = DEFAULT_CANVAS): Placement {
+  if (c.w / c.h > 1.25) {
+    // لوحة أفقية: الصورة بارتفاع اللوحة وتميل لجهة المنتج (يسار)
+    const s = Math.max(c.h / h, (c.w * 0.5) / w)
+    const iw = w * s
+    return { x: Math.min(0, c.w * 0.02), y: c.h - h * s, w: iw }
+  }
+  return w / h > 0.9 ? fitWidthPlacement(w, h, c) : coverPlacement(w, h, c)
 }
 
-export function sceneRect(scene: SceneContent | null, info: AssetInfo | undefined): Rect | null {
+export function sceneRect(scene: SceneContent | null, info: AssetInfo | undefined, c: Canvas = DEFAULT_CANVAS): Rect | null {
   if (!scene || !info) return null
-  const p = scene.place ?? autoPlacement(info.w, info.h)
+  const p = scene.place ?? autoPlacement(info.w, info.h, c)
   return { x: p.x, y: p.y, w: p.w, h: (p.w * info.h) / info.w }
 }
 
@@ -74,7 +80,7 @@ export function productRectOf(d: Design): Rect | null {
   if (!p) return null
   const cut = cutoutSync(p)
   if (!cut) return null
-  const sc = sceneRect(d.content.scene, assetInfoSync(d.content.scene?.assetId))
+  const sc = sceneRect(d.content.scene, assetInfoSync(d.content.scene?.assetId), canvasOf(d))
   return productSourceRect(p, sc, cut, d.style)
 }
 

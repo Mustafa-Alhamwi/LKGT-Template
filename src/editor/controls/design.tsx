@@ -6,6 +6,8 @@ import { backdropCss } from '../../poster/Backdrop'
 import { CONTACT_THEME_ORDER, contactThemes } from '../../poster/ContactBar'
 import { decor } from '../../model/templates'
 import { RED } from '../../model/brand'
+import { EffectsSection, LayerSection, ObjectHeader, ObjectSpecific, TransformSection, useDecor } from './objects'
+import { isObjectKind } from '../../poster/DecorLayer'
 import { LkgtLogo } from '../../brand/LkgtLogo'
 import { normalizeImage, putAsset, resolvePublic, useAsset } from '../../lib/assets'
 import { pickFile } from '../../lib/importer'
@@ -404,9 +406,21 @@ export function DecorList() {
 }
 
 export function DecorControls({ id }: { id: string }) {
-  const item = useEditor((s) => s.design.style.decor.find((d) => d.id === id))
+  const item = useDecor(id)
   const badge = useEditor((s) => s.design.content.texts.badge)
   if (!item) return null
+  if (isObjectKind(item.kind)) {
+    const title = item.name || (item.kind === 'qr' ? 'رمز QR' : item.kind === 'image' ? 'صورة' : 'ملصق')
+    return (
+      <>
+        <ObjectHeader item={item} title={title} />
+        <ObjectSpecific item={item} />
+        <TransformSection item={item} />
+        <EffectsSection item={item} />
+        <LayerSection item={item} />
+      </>
+    )
+  }
   const set = (fn: (x: DecorItem) => void, key = '') =>
     changeStyle((s) => {
       const d = s.decor.find((x) => x.id === id)
@@ -415,41 +429,18 @@ export function DecorControls({ id }: { id: string }) {
   const noSize = ['glow', 'diagonal', 'noise', 'badge', 'line', 'beam', 'blobs', 'wave', 'ribbon'].includes(item.kind)
   return (
     <>
-      <Group title={DECOR_KINDS.find((k) => k.value === item.kind)?.label ?? 'زخرفة'}>
-        <Chips
-          value={item.layer}
-          options={[
-            { value: 'back', label: 'خلف المنتج' },
-            { value: 'front', label: 'أمام المنتج' },
-          ]}
-          onChange={(v) => set((x) => void (x.layer = v))}
-        />
+      <ObjectHeader item={item} title={DECOR_KINDS.find((k) => k.value === item.kind)?.label ?? 'زخرفة'} />
+      <Group title="المظهر">
         {item.kind === 'badge' && <TextArea value={badge} onChange={(v) => changeContent((c) => void (c.texts.badge = v), 'badge')} placeholder="نص الشارة" />}
         {(item.kind === 'watermark' || item.kind === 'ribbon') && <TextArea value={item.text} dir="auto" onChange={(v) => set((x) => void (x.text = v), 'txt')} />}
         {item.kind === 'watermark' && <p className="hint">{'{title}'} = اسم المنتج تلقائياً</p>}
         <ColorInput label="اللون" value={item.color} onChange={(v) => set((x) => void (x.color = v), 'c')} />
         {['badge', 'ribbon', 'blobs'].includes(item.kind) && <ColorInput label={item.kind === 'blobs' ? 'اللون الثاني' : 'لون النص'} value={item.color2} onChange={(v) => set((x) => void (x.color2 = v), 'c2')} />}
-        <Slider label="الشفافية" value={item.opacity} min={0} max={1} step={0.01} onChange={(v) => set((x) => void (x.opacity = v), 'o')} />
         {!noSize && <Slider label="السماكة / الحجم" value={item.size} min={1} max={120} onChange={(v) => set((x) => void (x.size = v), 's')} />}
       </Group>
-      <Group title="الموضع والحجم">
-        <Slider label="س" value={item.x} min={-600} max={1080} onChange={(v) => set((x) => void (x.x = v), 'x')} />
-        <Slider label="ص" value={item.y} min={-600} max={1440} onChange={(v) => set((x) => void (x.y = v), 'y')} />
-        <Slider label="العرض" value={item.w} min={10} max={2000} onChange={(v) => set((x) => void (x.w = v), 'w')} />
-        <Slider label="الارتفاع" value={item.h} min={2} max={2000} onChange={(v) => set((x) => void (x.h = v), 'h')} />
-        <Slider label="الدوران" value={item.rotate} min={-180} max={180} unit="°" onChange={(v) => set((x) => void (x.rotate = v), 'r')} />
-        <Btn
-          small
-          variant="danger"
-          icon={<Trash2 size={14} />}
-          onClick={() => {
-            changeStyle((s) => void (s.decor = s.decor.filter((x) => x.id !== id)))
-            select(null, false)
-          }}
-        >
-          حذف الزخرفة
-        </Btn>
-      </Group>
+      <TransformSection item={item} />
+      <EffectsSection item={item} />
+      <LayerSection item={item} />
     </>
   )
 }

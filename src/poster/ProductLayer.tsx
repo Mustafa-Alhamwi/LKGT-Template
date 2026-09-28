@@ -102,6 +102,7 @@ export function ProductLayer({ product, cutout, bbox, fx, busy }: Props) {
         src={cutout.url}
         alt=""
         draggable={false}
+        data-eid="product"
         onPointerDown={edit ? (e) => edit.startDrag({ kind: 'product' }, e) : undefined}
         style={{
           position: 'absolute',

@@ -1,7 +1,7 @@
 import { createRoot } from 'react-dom/client'
 import { toCanvas } from 'html-to-image'
 import type { BrandConfig, Design, PartnerLogo } from '../model/types'
-import { POSTER_H, POSTER_W } from '../model/types'
+import { canvasOf } from '../model/types'
 import { Poster } from '../poster/Poster'
 import { getExportFontCss, initFonts } from './fonts'
 import { getCutout } from './cutout'
@@ -75,8 +75,9 @@ async function waitImages(node: HTMLElement) {
 const frame = () => new Promise((r) => requestAnimationFrame(() => r(null)))
 
 export interface ExportOptions {
-  scale: 1 | 2
+  scale: number
   format: 'png' | 'jpg'
+  quality?: number
 }
 
 export async function renderDesign(
@@ -94,6 +95,9 @@ export async function renderDesign(
   const partner = partners.find((p) => p.id === design.content.partnerLogoId)
   if (partner && !partner.builtIn) await loadAsset(partner.src)
 
+  const cv = canvasOf(design)
+  const POSTER_W = cv.w
+  const POSTER_H = cv.h
   const host = document.createElement('div')
   host.style.cssText = `position:absolute;left:0;top:0;width:${POSTER_W}px;height:${POSTER_H}px;`
   offscreenRoot().appendChild(host)
@@ -125,8 +129,8 @@ export async function renderDesign(
     const canvas = await toCanvas(node, {
       width: POSTER_W,
       height: POSTER_H,
-      canvasWidth: POSTER_W * opts.scale,
-      canvasHeight: POSTER_H * opts.scale,
+      canvasWidth: Math.round(POSTER_W * opts.scale),
+      canvasHeight: Math.round(POSTER_H * opts.scale),
       pixelRatio: 1,
       skipAutoScale: true,
       cacheBust: false,
@@ -135,7 +139,7 @@ export async function renderDesign(
       filter: (el) => !(el instanceof HTMLElement && EDITOR_ONLY.some((c) => el.classList?.contains(c))),
     })
     const blob = await new Promise<Blob | null>((res) =>
-      canvas.toBlob(res, opts.format === 'jpg' ? 'image/jpeg' : 'image/png', 0.95),
+      canvas.toBlob(res, opts.format === 'jpg' ? 'image/jpeg' : 'image/png', opts.quality ?? 0.95),
     )
     if (!blob) throw new Error('encode failed')
     return blob

@@ -1,34 +1,37 @@
 import { useState } from 'react'
-import { AlignCenter, AlignLeft, AlignRight, Copy, Eye, EyeOff, Link2, Scissors, Trash2 } from 'lucide-react'
+import { AlignCenter, AlignLeft, AlignRight, Clipboard, ClipboardPaste, Copy, Eye, EyeOff, ImagePlus, Link2, Lock, Scissors, Trash2, Unlock, X } from 'lucide-react'
 import { Btn, Chips, ColorInput, Field, Group, IconBtn, Select, Slider, Switch, TextArea } from '../../ui/kit'
 import {
+  applyTextPresetTo,
   attachTexts,
   changeContent,
   changeStyle,
   changeTextStyle,
+  copyTextStyle,
+  deleteTextPreset,
   detachTexts,
   duplicateExtraText,
   getTextStyle,
+  pasteTextStyle,
   removeExtraText,
+  saveTextPreset,
   setEditing,
+  toast,
   useEditor,
 } from '../../store/editor'
+import { BUILTIN_TEXT_PRESETS } from '../../model/textPresets'
+import { BLENDS } from './objects'
+import { presetPreviewCss, usePresetCtx } from '../Library'
+import { normalizeImage, putAsset } from '../../lib/assets'
+import { pickFile } from '../../lib/importer'
+import type { BlendMode } from '../../model/types'
 import { AR_WEIGHTS, LAT_WEIGHTS } from '../../lib/fonts'
-import type { Decoration, FitMode, Selection, TextKey, TextPanel, TextStyle } from '../../model/types'
+import { categoryDef } from '../../model/categories'
+import type { Decoration, FitMode, Selection, TextPanel, TextStyle } from '../../model/types'
 
-export const TEXT_LABELS: Record<TextKey, string> = {
-  kicker: 'سطر تمهيدي',
-  title: 'اسم المنتج',
-  subtitle: 'وصف المنتج',
-  tagline: 'الجملة التسويقية',
-  features: 'المزايا',
-  note: 'سطر إضافي',
-  price: 'السعر',
-}
-
-export const TEXT_HINTS: Partial<Record<TextKey, string>> = {
-  tagline: 'ضع *كلمة* بين نجمتين لتلوينها',
-  features: 'ميزة في كل سطر',
+/** تعريف فئة التصميم الحالية (أسماء الحقول والتلميحات) */
+export function useCat() {
+  return useEditor((s) => categoryDef(s.design.category))
 }
 
 const FITS: { value: FitMode; label: string; title: string }[] = [
@@ -72,12 +75,14 @@ export function useTextValue(sel: Selection) {
   return [value, set] as const
 }
 
-type Pill = 'text' | 'color' | 'card' | 'layout'
+type Pill = 'text' | 'color' | 'card' | 'layout' | 'style'
 let lastPill: Pill = 'text'
 
 export function TextControls({ sel }: { sel: Extract<Selection, { kind: 'text' | 'extra' }> }) {
   const st = useEditor((s) => getTextStyle(s.design, sel))
   const fonts = useEditor((s) => s.fonts)
+  const cat = useCat()
+  const clip = useEditor((s) => s.clip)
   const [value, setValue] = useTextValue(sel)
   const [pill, setPillState] = useState<Pill>(lastPill)
   const setPill = (p: Pill) => {
@@ -91,13 +96,16 @@ export function TextControls({ sel }: { sel: Extract<Selection, { kind: 'text' |
   const boxy = ['pill', 'box', 'outlineBox', 'glass', 'tab'].includes(st.deco)
   const lineDeco = ['rules', 'underline', 'doubleUnderline', 'bar', 'bracket'].includes(st.deco)
   const isFree = sel.kind === 'extra' || !!st.free
-  const title = sel.kind === 'text' ? TEXT_LABELS[sel.key] : 'نص إضافي'
+  const title = sel.kind === 'text' ? cat.labels[sel.key] : 'نص إضافي'
 
   return (
     <>
       <div className="el-title">
         <strong>{title}</strong>
         <span className="el-actions">
+          <IconBtn icon={<Clipboard size={15} />} title="نسخ التنسيق (Ctrl+Alt+C)" onClick={() => copyTextStyle() && toast('تم نسخ التنسيق — حدد نصاً آخر والصقه', 'ok', 1800)} />
+          <IconBtn icon={<ClipboardPaste size={15} />} title="لصق التنسيق (Ctrl+Alt+V)" disabled={clip?.kind !== 'style'} onClick={() => pasteTextStyle([sel])} />
+          <IconBtn icon={st.locked ? <Lock size={15} /> : <Unlock size={15} />} active={!!st.locked} title={st.locked ? 'فتح القفل' : 'قفل (لا يتحرك بالسحب)'} onClick={() => set((x) => void (x.locked = !x.locked), 'lock')} />
           {sel.kind === 'text' ? (
             <IconBtn icon={st.visible ? <Eye size={16} /> : <EyeOff size={16} />} title={st.visible ? 'إخفاء القسم' : 'إظهار القسم'} onClick={() => set((x) => void (x.visible = !x.visible), 'vis')} />
           ) : (
@@ -116,6 +124,7 @@ export function TextControls({ sel }: { sel: Extract<Selection, { kind: 'text' |
             ['color', 'اللون والتأثير'],
             ['card', 'البطاقة'],
             ['layout', 'الموضع'],
+            ['style', 'أنماط'],
           ] as [Pill, string][]
         ).map(([v, l]) => (
           <button key={v} className={pill === v ? 'on' : ''} onClick={() => setPill(v)}>
@@ -128,7 +137,7 @@ export function TextControls({ sel }: { sel: Extract<Selection, { kind: 'text' |
         <>
           <Group>
             <TextArea value={value} onChange={setValue} rows={sel.kind === 'text' && (sel.key === 'features' || sel.key === 'tagline') ? 3 : 2} dir={sel.kind === 'text' && (sel.key === 'title' || sel.key === 'subtitle') ? 'ltr' : 'auto'} />
-            {sel.kind === 'text' && TEXT_HINTS[sel.key] && <p className="hint">{TEXT_HINTS[sel.key]}</p>}
+            {sel.kind === 'text' && cat.hints[sel.key] && <p className="hint">{cat.hints[sel.key]}</p>}
             <Btn small onClick={() => setEditing(id)}>
               تعديل مباشر على التصميم
             </Btn>
@@ -154,7 +163,15 @@ export function TextControls({ sel }: { sel: Extract<Selection, { kind: 'text' |
             ) : (
               <Slider label="أقصى حجم" value={st.maxSize} min={10} max={280} unit="px" onChange={(v) => set((x) => void (x.maxSize = v), 'max')} />
             )}
+            {(st.fit === 'none' || st.fit === 'kashida') && (
+              <>
+                <Switch label="التفاف تلقائي للكلمات" checked={!!st.wrap} onChange={(v) => set((x) => void (x.wrap = v), 'wrap')} />
+                {st.wrap && <Switch label="توازن طول الأسطر" checked={!!st.balance} onChange={(v) => set((x) => void (x.balance = v), 'bal')} />}
+              </>
+            )}
             <Switch label="أحرف كبيرة (EN)" checked={st.uppercase} onChange={(v) => set((x) => void (x.uppercase = v), 'up')} />
+            <Switch label="شطب النص (سعر قديم)" checked={!!st.strike} onChange={(v) => set((x) => void (x.strike = v), 'strike')} />
+            {isFree && <Slider label="انحناء النص (قوس)" value={st.curve ?? 0} min={-100} max={100} onChange={(v) => set((x) => void (x.curve = v), 'curve')} />}
             <Slider label="تباعد الأحرف" value={st.tracking} min={-0.1} max={0.5} step={0.005} onChange={(v) => set((x) => void (x.tracking = v), 'tr')} />
             <Slider label="تباعد الأسطر" value={st.lineHeight} min={0.8} max={2} step={0.01} onChange={(v) => set((x) => void (x.lineHeight = v), 'lh')} />
           </Group>
@@ -174,6 +191,29 @@ export function TextControls({ sel }: { sel: Extract<Selection, { kind: 'text' |
               </>
             )}
             <Slider label="الشفافية" value={st.opacity} min={0.1} max={1} step={0.01} onChange={(v) => set((x) => void (x.opacity = v), 'op')} />
+            <Field label="الدمج">
+              <Select<BlendMode> value={st.blend ?? 'normal'} options={BLENDS} onChange={(v) => set((x) => void (x.blend = v), 'blend')} />
+            </Field>
+            <div className="row-btns">
+              <Btn
+                small
+                icon={<ImagePlus size={14} />}
+                onClick={async () => {
+                  const [f] = await pickFile('image/*')
+                  if (!f) return
+                  const n = await normalizeImage(f, 1600)
+                  const a = await putAsset(n.blob, f.name, { w: n.w, h: n.h })
+                  set((x) => void (x.fillImage = a.id))
+                }}
+              >
+                تعبئة الحروف بصورة
+              </Btn>
+              {st.fillImage && (
+                <Btn small variant="ghost" icon={<X size={14} />} onClick={() => set((x) => void (x.fillImage = undefined))}>
+                  إزالة الصورة
+                </Btn>
+              )}
+            </div>
           </Group>
           <Group title="تأثيرات">
             <Slider label="سماكة حدود الحروف" value={st.strokeW ?? 0} min={0} max={12} step={0.5} unit="px" onChange={(v) => set((x) => void (x.strokeW = v), 'sw')} />
@@ -239,6 +279,8 @@ export function TextControls({ sel }: { sel: Extract<Selection, { kind: 'text' |
         </Group>
       )}
 
+      {pill === 'style' && <StylePresets sel={sel} />}
+
       {pill === 'layout' && (
         <>
           {sel.kind === 'text' && (
@@ -280,6 +322,63 @@ export function TextControls({ sel }: { sel: Extract<Selection, { kind: 'text' |
           </Group>
         </>
       )}
+    </>
+  )
+}
+
+function StylePresets({ sel }: { sel: Extract<Selection, { kind: 'text' | 'extra' }> }) {
+  const ctx = usePresetCtx()
+  const user = useEditor((s) => s.textPresets)
+  const [name, setName] = useState('')
+  return (
+    <>
+      <Group title="أنماط جاهزة" hint="تُطبَّق على هذا النص فقط (يبقى نصك وموضعه كما هما).">
+        <div className="preset-grid">
+          {BUILTIN_TEXT_PRESETS.map((p) => {
+            const st = p.style(ctx)
+            return (
+              <button key={p.id} className={`preset ${ctx.dark ? 'dk' : ''}`} onClick={() => applyTextPresetTo({ ...st, fit: 'none' }, [sel])} title={p.name}>
+                <span className="preset-sample">
+                  <span style={presetPreviewCss(st, ctx)}>{p.sample}</span>
+                </span>
+                <small>{p.name}</small>
+              </button>
+            )
+          })}
+        </div>
+      </Group>
+      <Group title="أنماطي المحفوظة">
+        <div className="ver-new">
+          <input className="txi" placeholder="اسم للنمط الحالي" value={name} onChange={(e) => setName(e.target.value)} />
+          <Btn
+            small
+            variant="primary"
+            onClick={() => {
+              saveTextPreset(name.trim() || `نمط ${user.length + 1}`)
+              setName('')
+              toast('تم حفظ النمط', 'ok', 1800)
+            }}
+          >
+            حفظ
+          </Btn>
+        </div>
+        {!user.length && <p className="hint">احفظ تنسيق النص الحالي (لون، بطاقة، ظل، خط…) لتطبّقه على أي نص لاحقاً.</p>}
+        <div className="preset-grid">
+          {user.map((p) => (
+            <div key={p.id} className="preset-wrap">
+              <button className={`preset ${ctx.dark ? 'dk' : ''}`} onClick={() => applyTextPresetTo({ ...p.style }, [sel])} title={p.name}>
+                <span className="preset-sample">
+                  <span style={presetPreviewCss(p.style, ctx)}>{p.name}</span>
+                </span>
+                <small>{p.name}</small>
+              </button>
+              <button className="partner-del" title="حذف النمط" onClick={() => deleteTextPreset(p.id)}>
+                <Trash2 size={11} />
+              </button>
+            </div>
+          ))}
+        </div>
+      </Group>
     </>
   )
 }

@@ -13,6 +13,7 @@ import App from './App'
 import { bootFonts } from './lib/fontBoot'
 
 bootFonts()
+import('./store/projects').then((m) => m.startAutosave())
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -22,7 +23,14 @@ createRoot(document.getElementById('root')!).render(
 
 // أدوات تطوير (للاختبار الآلي فقط)
 if (import.meta.env.DEV) {
-  Promise.all([import('./store/editor'), import('./lib/exporter'), import('./model/templates'), import('./lib/importer')]).then(([store, exp, tpl, imp]) => {
-    ;(window as unknown as Record<string, unknown>).__lk = { ...store, ...exp, ...imp, templates: tpl.BUILTIN_TEMPLATES }
+  Promise.all([
+    import('./store/editor'),
+    import('./lib/exporter'),
+    import('./model/registry'),
+    import('./lib/importer'),
+    import('./store/objects'),
+    import('./model/formats'),
+  ]).then(([store, exp, tpl, imp, obj, fmt]) => {
+    ;(window as unknown as Record<string, unknown>).__lk = { ...store, ...exp, ...imp, ...obj, ...fmt, templates: tpl.BUILTIN_TEMPLATES }
   })
 }

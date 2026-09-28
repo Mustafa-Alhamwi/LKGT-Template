@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AlertTriangle, ArrowLeftRight, Check, HardDriveDownload, Trash2, Upload, X } from 'lucide-react'
-import { saveAsTemplate, setBrand, toast, useEditor } from '../store/editor'
+import { saveAsTemplate, setBrand, setPrefs, toast, useEditor } from '../store/editor'
+import { buildCommands, formatKeys, keysFor } from '../lib/commands'
 import { AR_WEIGHTS, LAT_WEIGHTS, UI_WEIGHTS, canQueryLocalFonts, clearImportedFonts, importFontFiles, importFromDevice } from '../lib/fonts'
 import { Btn, Chips, Slider } from '../ui/kit'
 import { pickFile } from '../lib/importer'
@@ -204,31 +205,81 @@ export function SaveTemplateDialog() {
   )
 }
 
-const SHORTCUTS: [string, string][] = [
+const FIXED_SHORTCUTS: [string, string][] = [
   ['نقر مزدوج على نص', 'تعديل النص مباشرة'],
   ['Ctrl + Enter / Esc', 'إنهاء تعديل النص'],
-  ['سحب', 'تحريك النصوص / المنتج / الخلفية / الشكل'],
+  ['سحب', 'تحريك العناصر — مع التحديد المتعدد تتحرك معاً'],
+  ['Shift + نقر', 'إضافة عنصر للتحديد المتعدد'],
+  ['سحب على الخلفية', 'تحديد عدة عناصر بمربع'],
   ['Shift + سحب', 'تحريك أفقي أو عمودي فقط'],
+  ['Alt + سحب', 'تعطيل الالتصاق بالخطوط الإرشادية'],
   ['عجلة الفأرة', 'تكبير الخلفية أو المنتج المحدد'],
+  ['Ctrl + عجلة الفأرة', 'تكبير/تصغير مساحة العمل'],
   ['الأسهم (مع تحديد)', 'تحريك دقيق 1px — مع Shift 10px'],
   ['← / → (بدون تحديد)', 'القالب التالي / السابق'],
-  ['Delete', 'إخفاء/حذف العنصر المحدد'],
-  ['Ctrl + Z / Ctrl + Y', 'تراجع / إعادة (يعمل بأي لغة كتابة)'],
-  ['Ctrl + E', 'تصدير'],
-  ['Ctrl + V', 'لصق صورة من الحافظة'],
-  ['Esc', 'إلغاء التحديد'],
+  ['Ctrl + K', 'لوحة الأوامر — ابحث عن أي أمر'],
 ]
 
+function KeyRecorder({ id, current, onDone }: { id: string; current: string; onDone: () => void }) {
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return
+      if (e.key === 'Escape') return onDone()
+      const inv: Record<string, string> = { BracketLeft: '[', BracketRight: ']', Slash: '/', Comma: ',', Period: '.', Equal: '=', Minus: '-' }
+      let k = e.code.replace(/^Key/, '').replace(/^Digit/, '')
+      k = inv[e.code] ?? k
+      const spec = [e.ctrlKey || e.metaKey ? 'Ctrl' : '', e.shiftKey ? 'Shift' : '', e.altKey ? 'Alt' : '', k].filter(Boolean).join('+')
+      setPrefs({ shortcuts: { ...useEditor.getState().prefs.shortcuts, [id]: spec } })
+      onDone()
+    }
+    window.addEventListener('keydown', h, true)
+    return () => window.removeEventListener('keydown', h, true)
+  }, [id, onDone])
+  return <kbd className="rec">اضغط الاختصار الجديد… ({current || 'بدون'})</kbd>
+}
+
 export function ShortcutsDialog() {
+  const [rec, setRec] = useState<string | null>(null)
+  const prefs = useEditor((s) => s.prefs)
+  const cmds = buildCommands().filter((c) => c.keys || prefs.shortcuts[c.id])
   return (
-    <Modal title="اختصارات لوحة المفاتيح" onClose={close}>
+    <Modal title="اختصارات لوحة المفاتيح" onClose={close} wide>
+      <p className="hint">الاختصارات تعمل بأي لغة كتابة (تعتمد على موضع المفتاح). انقر «تغيير» لتخصيص أي اختصار.</p>
       <div className="shortcuts">
-        {SHORTCUTS.map(([k, v]) => (
+        {FIXED_SHORTCUTS.map(([k, v]) => (
           <div key={k}>
             <kbd>{k}</kbd>
             <span>{v}</span>
           </div>
         ))}
+      </div>
+      <h4 className="ftitle" style={{ marginTop: 14 }}>اختصارات قابلة للتخصيص</h4>
+      <div className="shortcuts custom">
+        {cmds.map((c) => {
+          const cur = keysFor(c)
+          return (
+            <div key={c.id}>
+              {rec === c.id ? <KeyRecorder id={c.id} current={cur ?? ''} onDone={() => setRec(null)} /> : <kbd>{cur ? formatKeys(cur) : 'بدون'}</kbd>}
+              <span>{c.label}</span>
+              <button className="link" onClick={() => setRec(c.id)}>
+                تغيير
+              </button>
+              {prefs.shortcuts[c.id] !== undefined && (
+                <button
+                  className="link"
+                  onClick={() => {
+                    const { [c.id]: _x, ...rest } = prefs.shortcuts
+                    setPrefs({ shortcuts: rest })
+                  }}
+                >
+                  استعادة
+                </button>
+              )}
+            </div>
+          )
+        })}
       </div>
     </Modal>
   )

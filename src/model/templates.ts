@@ -61,20 +61,21 @@ export const DEFAULT_TEXT: TextStyle = {
   shadowColor: '#000000',
 }
 
-type TextPatch = Partial<Omit<TextStyle, 'decoStyle'>> & { decoStyle?: Partial<DecoStyle> }
+export type TextPatch = Partial<Omit<TextStyle, 'decoStyle'>> & { decoStyle?: Partial<DecoStyle> }
 
 export function txt(p: TextPatch = {}, base: TextStyle = DEFAULT_TEXT): TextStyle {
   return { ...base, ...p, decoStyle: { ...base.decoStyle, ...(p.decoStyle ?? {}) } }
 }
 
-const hidden = (p: TextPatch = {}) => txt({ visible: false, ...p })
+const WHITE_C = '#FFFFFF'
+export const hidden = (p: TextPatch = {}) => txt({ visible: false, ...p })
 
 /** نمط نص جديد يضيفه المستخدم */
 export function makeExtraStyle(): TextStyle {
   return txt({ size: 46, color: INK, weightAr: 700, free: true, fx: 190, fy: 690, fw: 700, align: 'center' })
 }
 
-export const DEFAULT_ORDER: TextKey[] = ['kicker', 'title', 'subtitle', 'tagline', 'features', 'note', 'price']
+export const DEFAULT_ORDER: TextKey[] = ['kicker', 'title', 'subtitle', 'tagline', 'features', 'note', 'oldPrice', 'price', 'discount', 'cta']
 
 let decorSeq = 0
 export function decor(p: Partial<DecorItem> & Pick<DecorItem, 'kind'>): DecorItem {
@@ -151,6 +152,23 @@ export function baseStyle(): TemplateStyle {
         }),
         note: hidden({ size: 28, color: GRAY, weightAr: 400 }),
         price: hidden({ size: 150, color: RED, weightLat: 700, lineHeight: 1 }),
+        oldPrice: hidden({ size: 54, color: GRAY, weightLat: 400, weightAr: 500, strike: true, lineHeight: 1 }),
+        discount: hidden({
+          size: 44,
+          color: WHITE_C,
+          weightLat: 700,
+          deco: 'pill',
+          decoStyle: { fill: RED, radius: 999, padX: 30, padY: 8, full: false, shadow: true },
+          lineHeight: 1,
+        }),
+        cta: hidden({
+          size: 38,
+          color: WHITE_C,
+          weightAr: 700,
+          deco: 'pill',
+          marginTop: 12,
+          decoStyle: { fill: INK, radius: 999, padX: 40, padY: 14, full: false, shadow: true },
+        }),
       },
     },
     contact: { theme: 'red-ring', accent: RED },
@@ -159,7 +177,7 @@ export function baseStyle(): TemplateStyle {
   }
 }
 
-type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? (T[K] extends unknown[] ? T[K] : DeepPartial<T[K]>) : T[K] }
+export type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? (T[K] extends unknown[] ? T[K] : DeepPartial<T[K]>) : T[K] }
 
 function isObj(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)
@@ -176,11 +194,11 @@ export function deepMerge<T>(base: T, patch: DeepPartial<T> | undefined): T {
   return out as T
 }
 
-function style(patch: DeepPartial<TemplateStyle>): TemplateStyle {
+export function style(patch: DeepPartial<TemplateStyle>): TemplateStyle {
   return deepMerge(baseStyle(), patch)
 }
 
-const WHITE = '#FFFFFF'
+export const WHITE = '#FFFFFF'
 
 const SOFT_SHADOW = { shadow: true, shadowSize: 1, shadowColor: '#000000' }
 
@@ -189,7 +207,7 @@ function tpl(id: string, name: string, nameEn: string, tags: string[], st: DeepP
   return { id, name, nameEn, category: 'ads', builtIn: true, tags, style: style(st) }
 }
 
-const pillRed = (extra: Partial<DecoStyle> = {}, color = WHITE): TextPatch => ({
+export const pillRed = (extra: Partial<DecoStyle> = {}, color = WHITE): TextPatch => ({
   size: 40,
   color,
   deco: 'pill',
@@ -199,7 +217,7 @@ const pillRed = (extra: Partial<DecoStyle> = {}, color = WHITE): TextPatch => ({
 
 /* ================================================================== */
 
-export const BUILTIN_TEMPLATES: Template[] = [
+export const ADS_TEMPLATES: Template[] = [
   /* ------------------------------ فاتحة عصرية ------------------------------ */
   tpl('clean-white', 'أبيض نقي', 'Clean White', ['فاتح', 'بسيط'], {
     backdrop: { kind: 'studio', color: '#FFFFFF', color2: '#E6E6EA' },

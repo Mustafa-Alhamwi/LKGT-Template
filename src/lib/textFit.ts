@@ -175,9 +175,54 @@ export interface FitResult {
   sizes: number[]
 }
 
+/** التفاف الكلمات حتى العرض المطلوب مع إبقاء *الكلمات الملونة* سليمة عبر الأسطر */
+export function wrapParagraph(par: string, size: number, maxW: number, f: MeasureFont, version: number, balance: boolean): string[] {
+  const words = par.split(/\s+/).filter(Boolean)
+  if (words.length <= 1) return [par]
+  const wd = (t: string) => (measure100(stripMarks(t) || ' ', f, version) * size) / 100
+  const greedy = (limit: number): string[][] => {
+    const lines: string[][] = []
+    let cur: string[] = []
+    for (const w of words) {
+      const test = [...cur, w].join(' ')
+      if (cur.length && wd(test) > limit) {
+        lines.push(cur)
+        cur = [w]
+      } else cur.push(w)
+    }
+    if (cur.length) lines.push(cur)
+    return lines
+  }
+  let lines = greedy(maxW)
+  if (balance && lines.length > 1) {
+    // أصغر عرض يحافظ على نفس عدد الأسطر
+    let lo = maxW * 0.35
+    let hi = maxW
+    for (let i = 0; i < 14; i++) {
+      const mid = (lo + hi) / 2
+      if (greedy(mid).length <= lines.length) hi = mid
+      else lo = mid
+    }
+    lines = greedy(hi)
+  }
+  // إغلاق/إعادة فتح علامة التلوين بين الأسطر
+  let open = false
+  return lines.map((ws) => {
+    let t = ws.join(' ')
+    if (open) t = '*' + t
+    const stars = (t.match(/\*/g) ?? []).length
+    open = stars % 2 === 1
+    if (open) t += '*'
+    return t
+  })
+}
+
 export function fitLines(raw: string, st: TextStyle, innerW: number, version: number): FitResult {
-  const lines = raw.split('\n')
   const f: MeasureFont = { weightAr: st.weightAr, weightLat: st.weightLat, tracking: st.tracking, uppercase: st.uppercase }
+  let lines = raw.split('\n')
+  if (st.wrap && (st.fit === 'none' || st.fit === 'kashida')) {
+    lines = lines.flatMap((p) => (p.trim() ? wrapParagraph(p, st.size, innerW, f, version, !!st.balance) : [p]))
+  }
   const widths = lines.map((l) => measure100(stripMarks(l) || ' ', f, version))
   const clamp = (s: number) => Math.max(8, Math.min(st.maxSize, s))
   switch (st.fit) {
@@ -191,7 +236,8 @@ export function fitLines(raw: string, st: TextStyle, innerW: number, version: nu
     case 'kashida': {
       const max = Math.max(...widths, 1)
       const s = Math.min(st.size, (100 * innerW) / max)
-      return { lines: lines.map((l) => kashidaFit(l, innerW, s, f, version)), sizes: lines.map(() => s) }
+      const last = lines.length - 1
+      return { lines: lines.map((l, i) => (st.wrap && i === last ? l : kashidaFit(l, innerW, s, f, version))), sizes: lines.map(() => s) }
     }
     default: {
       // حجم ثابت — مع تصغير تلقائي إذا تجاوز النص العرض المتاح

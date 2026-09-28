@@ -6,6 +6,23 @@
 export const POSTER_W = 1080
 export const POSTER_H = 1440
 
+/** مقاس اللوحة: كل القوالب تُبنى على 1080×1440 وتُحوَّل ذكياً لبقية المقاسات */
+export interface Canvas {
+  w: number
+  h: number
+  /** معرّف المقاس الجاهز (post, story, square…) أو custom */
+  format?: string
+  /** هوامش آمنة لعناصر الهوية (اللوغو والتواصل) — مثلاً واجهة الستوري */
+  safeTop?: number
+  safeBottom?: number
+}
+
+export const DEFAULT_CANVAS: Canvas = { w: POSTER_W, h: POSTER_H, format: 'post' }
+
+export function canvasOf(d: { canvas?: Canvas } | null | undefined): Canvas {
+  return d?.canvas ?? DEFAULT_CANVAS
+}
+
 export type ArWeight = 100 | 300 | 400 | 500 | 700 | 900
 export type LatWeight = 300 | 400 | 700
 
@@ -71,6 +88,12 @@ export interface AdTexts {
   features: string[]
   price: string
   kicker: string
+  /** السعر القديم (يُشطب) — لعروض الأسعار */
+  oldPrice: string
+  /** نسبة الخصم أو قيمته */
+  discount: string
+  /** زر الدعوة لاتخاذ إجراء */
+  cta: string
 }
 
 export interface ExtraText {
@@ -86,11 +109,13 @@ export interface AdContent {
   partnerLogoId: string | null
   /** نصوص إضافية حرّة أضافها المستخدم */
   extras?: ExtraText[]
+  /** الجواب الصحيح في قوالب (صح/خطأ) و(حقيقة/خرافة): a = الأول ، b = الثاني */
+  answer?: 'a' | 'b' | null
 }
 
 /* ------------------------------ Style ------------------------------ */
 
-export type TextKey = 'kicker' | 'title' | 'subtitle' | 'tagline' | 'note' | 'features' | 'price'
+export type TextKey = 'kicker' | 'title' | 'subtitle' | 'tagline' | 'note' | 'features' | 'price' | 'oldPrice' | 'discount' | 'cta'
 
 export type FitMode = 'none' | 'block' | 'lines' | 'kashida'
 
@@ -160,6 +185,19 @@ export interface TextStyle {
   strokeColor?: string
   textShadow?: 'none' | 'soft' | 'glow' | 'hard'
   shadowColor?: string
+  /** انحناء النص على قوس (−100 … 100) — للنصوص الحرّة */
+  curve?: number
+  /** تعبئة الحروف بصورة (معرّف أصل) */
+  fillImage?: string
+  /** التفاف تلقائي للكلمات عند تجاوز العرض */
+  wrap?: boolean
+  /** توزيع متوازن للأسطر */
+  balance?: boolean
+  /** شطب النص (السعر القديم) */
+  strike?: boolean
+  blend?: BlendMode
+  locked?: boolean
+  showWhen?: ShowWhen
 }
 
 export interface TextPanel {
@@ -244,6 +282,7 @@ export type BackdropKind =
   | 'red-sweep'
   | 'mesh'
   | 'split'
+  | 'vsplit'
   | 'paper'
   | 'aurora'
   | 'peach'
@@ -307,11 +346,93 @@ export type DecorKind =
   | 'blobs'
   | 'plus'
   | 'ribbon'
+  | 'sticker'
+  | 'qr'
+  | 'image'
+
+/** متى يظهر العنصر بالنسبة لإجابة التصميم (صح/خطأ…): دائماً، في السؤال فقط، عند كشف أي إجابة، أو عند إجابة محددة */
+export type ShowWhen = 'always' | 'question' | 'reveal' | 'a' | 'b'
+
+export type BlendMode =
+  | 'normal'
+  | 'multiply'
+  | 'screen'
+  | 'overlay'
+  | 'soft-light'
+  | 'hard-light'
+  | 'color-dodge'
+  | 'color-burn'
+  | 'darken'
+  | 'lighten'
+  | 'difference'
+  | 'luminosity'
+
+export type ObjShadow = 'none' | 'soft' | 'float' | 'hard' | 'glow'
+
+/** ملصق / شارة / أيقونة من المكتبة */
+export interface StickerSpec {
+  /** b: شارات ، s: أشكال ، i: أيقونات ، a: أسهم */
+  id: string
+  text: string
+  text2?: string
+  /** للأيقونات: سماكة الخط */
+  strokeW?: number
+  /** للأيقونات: خلفية */
+  bg?: 'none' | 'circle' | 'rounded' | 'squircle'
+  /** دور الاختيار في قوالب صح/خطأ */
+  answerRole?: 'a' | 'b'
+}
+
+export interface QrSpec {
+  mode: 'url' | 'whatsapp' | 'phone' | 'email' | 'text' | 'barcode'
+  data: string
+  /** رسالة واتساب جاهزة */
+  extra?: string
+  style: 'square' | 'dots' | 'rounded'
+  fg: string
+  bg: string
+  bgOn: boolean
+  radius: number
+  padding: number
+}
+
+export type ImageMask = 'none' | 'circle' | 'rounded' | 'squircle' | 'arch' | 'blob' | 'hex' | 'diamond'
+export type ImageFrame = 'none' | 'phone' | 'laptop' | 'browser' | 'tablet' | 'polaroid' | 'card'
+
+export interface ImageSpec {
+  assetId: string
+  /** قناع تفريغ (منتج إضافي) — null = الصورة كاملة */
+  maskAssetId: string | null
+  fit: 'cover' | 'contain'
+  mask: ImageMask
+  radius: number
+  borderW: number
+  borderColor: string
+  frame: ImageFrame
+  brightness: number
+  contrast: number
+  saturate: number
+  /** تحريك/تكبير الصورة داخل القناع */
+  zoom: number
+  panX: number
+  panY: number
+}
 
 export interface DecorItem {
   id: string
   kind: DecorKind
-  layer: 'back' | 'front'
+  layer: 'back' | 'front' | 'top'
+  name?: string
+  locked?: boolean
+  blend?: BlendMode
+  flip?: boolean
+  shadow?: ObjShadow
+  /** عنصر أضافه المستخدم ويبقى عند تبديل القالب */
+  carry?: boolean
+  showWhen?: ShowWhen
+  sticker?: StickerSpec
+  qr?: QrSpec
+  image?: ImageSpec
   x: number
   y: number
   w: number
@@ -343,7 +464,13 @@ export interface TemplateStyle {
   logos: { lkgt: LogoVariant; partner: PartnerVariant }
   /** مكان المنتج الافتراضي عندما لا يوجد مشهد (منتج مفرغ فقط) */
   productArea: { x: number; y: number; w: number; h: number }
+  /** عناصر مخفية */
+  hide?: Partial<Record<FixedLayer, boolean>>
+  /** عناصر مقفلة (لا تُحدَّد ولا تتحرك بالنقر على التصميم) */
+  lock?: Partial<Record<FixedLayer, boolean>>
 }
+
+export type FixedLayer = 'scene' | 'product' | 'shape' | 'textBlock' | 'logo' | 'partner' | 'contact'
 
 export interface Template {
   id: string
@@ -357,6 +484,8 @@ export interface Template {
   tags: string[]
   /** محتوى تجريبي مخصص (لقوالب المستخدم) */
   demo?: AdContent
+  /** اللون الرئيسي الذي بُني به القالب (الافتراضي أحمر LKGT) */
+  primary?: string
 }
 
 export type CategoryId = 'ads' | 'truefalse' | 'factmyth' | 'offers' | 'didyouknow'
@@ -367,6 +496,12 @@ export interface Design {
   style: TemplateStyle
   /** المستخدم بدأ العمل (لا يزال المحتوى نصوصاً نائبة إن كانت false) */
   touched: boolean
+  /** مقاس اللوحة (الافتراضي 1080×1440) */
+  canvas?: Canvas
+  /** فئة التصميم (تحدد أسماء الحقول والنصوص النائبة) */
+  category?: CategoryId
+  /** اللون الرئيسي المصبوغ داخل النمط حالياً (لإعادة التلوين بين مجموعات الهوية) */
+  primary?: string
 }
 
 /* ------------------------------ Brand ------------------------------ */
@@ -380,8 +515,27 @@ export interface BrandConfig {
   website: string
   instagram: string
   phone: string
+  whatsapp?: string
+  email?: string
+  address?: string
+  /** عناصر شريط التواصل المعروضة بالترتيب */
+  contactItems?: ContactItemKey[]
   /** لوغو LKGT مرفوع يدوياً (يحل مكان النسخة المتجهية) */
   customLogoAssetId: string | null
+}
+
+export type ContactItemKey = 'web' | 'ig' | 'ph' | 'wa' | 'mail' | 'addr'
+
+/** مجموعة هوية: معلومات + ألوان + إعدادات (يمكن حفظ أكثر من واحدة) */
+export interface BrandKit extends BrandConfig {
+  id: string
+  name: string
+  /** اللون الرئيسي: تُعاد صبغة القوالب الحمراء إليه تلقائياً */
+  primary: string
+  secondary: string
+  palette: string[]
+  /** إعادة تلوين القوالب بألوان المجموعة */
+  recolor: boolean
 }
 
 export interface PartnerLogo {

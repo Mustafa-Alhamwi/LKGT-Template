@@ -1,8 +1,8 @@
 import { useId } from 'react'
 import type { ShapeStyle } from '../model/types'
-import { POSTER_H, POSTER_W } from '../model/types'
 import type { Rect } from './geometry'
 import { isSel, useEdit } from './EditContext'
+import { useCanvas } from './CanvasContext'
 import { mix } from '../lib/color'
 
 /**
@@ -12,6 +12,7 @@ import { mix } from '../lib/color'
 export function ShapeLayer({ shape, box }: { shape: ShapeStyle; box: Rect | null }) {
   const uid = useId().replace(/:/g, '')
   const edit = useEdit()
+  const { w: POSTER_W, h: POSTER_H } = useCanvas()
   if (shape.kind === 'none' || !box) return null
   const b = { ...box, x: box.x + shape.offsetX, y: box.y + shape.offsetY }
   const cx = b.x + b.w / 2

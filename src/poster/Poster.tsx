@@ -1,6 +1,6 @@
 import { forwardRef } from 'react'
 import type { BrandConfig, Design, PartnerLogo } from '../model/types'
-import { POSTER_H, POSTER_W } from '../model/types'
+import { canvasOf } from '../model/types'
 import { useAsset } from '../lib/assets'
 import { useCutout } from '../lib/cutout'
 import { productBBox, productSourceRect, sceneRect } from './geometry'
@@ -13,6 +13,7 @@ import { TextBlock } from './TextBlock'
 import { Logos } from './Logos'
 import { ContactBar } from './ContactBar'
 import { useEdit } from './EditContext'
+import { CanvasCtx } from './CanvasContext'
 
 /** أيقونة منتج نائبة للمصغّرات — لا تظهر في التصدير */
 function ProductPlaceholder({ area, dark }: { area: { x: number; y: number; w: number; h: number }; dark: boolean }) {
@@ -53,7 +54,9 @@ export const Poster = forwardRef<HTMLDivElement, Props>(function Poster(
   const edit = useEdit()
   const { content, style } = design
   const sceneInfo = useAsset(content.scene?.assetId)
-  const sRect = sceneRect(content.scene, sceneInfo)
+  const canvas = canvasOf(design)
+  const hide = style.hide ?? {}
+  const sRect = sceneRect(content.scene, sceneInfo, canvas)
   const product = content.product && content.product.visible ? content.product : null
   const { cutout, busy } = useCutout(product)
   const srcRect = product && cutout ? productSourceRect(product, sRect, cutout, style) : null
@@ -65,23 +68,24 @@ export const Poster = forwardRef<HTMLDivElement, Props>(function Poster(
   const ghost = placeholders !== 'none'
 
   return (
+    <CanvasCtx.Provider value={canvas}>
     <div
       ref={ref}
       className={`lk-poster ${className ?? ''}`}
       data-theme={style.theme}
-      style={{ width: POSTER_W, height: POSTER_H, position: 'relative', overflow: 'hidden' }}
+      style={{ width: canvas.w, height: canvas.h, position: 'relative', overflow: 'hidden' }}
     >
       <Backdrop style={style.backdrop} />
-      {sRect && sceneInfo && <SceneLayer url={sceneInfo.url} rect={sRect} fade={style.fade} fx={style.sceneFx} />}
-      <DecorLayer items={style.decor} layer="back" texts={content.texts} />
-      <ShapeLayer shape={style.shape} box={shapeBox} />
+      {sRect && sceneInfo && !hide.scene && <SceneLayer url={sceneInfo.url} rect={sRect} fade={style.fade} fx={style.sceneFx} />}
+      <DecorLayer items={style.decor} layer="back" texts={content.texts} answer={content.answer} />
+      {!hide.shape && <ShapeLayer shape={style.shape} box={shapeBox} />}
       {product && cutout && bbox && <ProductLayer product={product} cutout={cutout} bbox={bbox} fx={style.productFx} busy={busy} />}
       {product && !cutout && busy && edit && (
         <div className="lk-product-loading" style={{ left: area.x, top: area.y, width: area.w, height: area.h }}>
           <span className="lk-spinner" />
         </div>
       )}
-      <DecorLayer items={style.decor} layer="front" texts={content.texts} />
+      <DecorLayer items={style.decor} layer="front" texts={content.texts} answer={content.answer} />
       {empty && placeholders === 'thumb' && <ProductPlaceholder area={area} dark={style.theme === 'dark'} />}
       {empty && edit && placeholders === 'edit' && (
         <button
@@ -95,9 +99,11 @@ export const Poster = forwardRef<HTMLDivElement, Props>(function Poster(
           <small>أو انقر للاختيار — تفريغ تلقائي وتدرج للخلفية</small>
         </button>
       )}
-      <TextBlock tb={style.text} texts={content.texts} extras={content.extras ?? []} fontsVersion={fontsVersion} />
-      <Logos brand={brand} lkgt={style.logos.lkgt} partnerVariant={style.logos.partner} partner={partner} ghost={ghost} />
-      <ContactBar brand={brand} theme={style.contact.theme} mode={style.theme} accent={style.contact.accent} />
+      <TextBlock tb={style.text} texts={content.texts} extras={content.extras ?? []} fontsVersion={fontsVersion} answer={content.answer} />
+      <DecorLayer items={style.decor} layer="top" texts={content.texts} answer={content.answer} />
+      <Logos brand={brand} lkgt={style.logos.lkgt} partnerVariant={style.logos.partner} partner={partner} ghost={ghost} hideLkgt={hide.logo} hidePartner={hide.partner} />
+      {!hide.contact && <ContactBar brand={brand} theme={style.contact.theme} mode={style.theme} accent={style.contact.accent} />}
     </div>
+    </CanvasCtx.Provider>
   )
 })

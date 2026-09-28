@@ -1,7 +1,7 @@
 import type { BrandConfig, ContactTheme } from '../model/types'
-import { POSTER_W } from '../model/types'
 import { GlobeIcon, InstagramIcon, PhoneIcon } from './icons'
 import { isSel, useEdit } from './EditContext'
+import { useCanvas } from './CanvasContext'
 import { latFamily, AR_FAMILY, FALLBACK } from '../lib/fonts'
 import { RED, RED_BRIGHT, INK } from '../model/brand'
 
@@ -159,8 +159,13 @@ interface Props {
 
 export function ContactBar({ brand, theme, mode, accent }: Props) {
   const edit = useEdit()
+  const cv = useCanvas()
+  const POSTER_W = cv.w
   const t = contactThemes(mode, accent)[theme] ?? contactThemes(mode)['red-ring']
-  const { y, w, h, fontSize } = brand.contact
+  const { w: bw, h, fontSize } = brand.contact
+  // موضع الشريط مثبّت نسبة لأسفل اللوحة (يتبع المقاس + الهامش الآمن)
+  const y = brand.contact.y + (cv.h - 1440) - (cv.safeBottom ?? 0)
+  const w = Math.min(bw, cv.w - 40)
   const iconSize = Math.round(h * 0.5)
   const font: React.CSSProperties = {
     fontFamily: `"${latFamily(700)}", "${AR_FAMILY}", ${FALLBACK}`,
@@ -201,6 +206,7 @@ export function ContactBar({ brand, theme, mode, accent }: Props) {
   return (
     <div
       className="lk-contact"
+      data-eid="contact"
       dir="ltr"
       style={{
         position: 'absolute',
@@ -210,6 +216,7 @@ export function ContactBar({ brand, theme, mode, accent }: Props) {
         height: h,
         borderRadius: h / 2,
         boxSizing: 'border-box',
+        zIndex: 6,
         display: 'flex',
         alignItems: 'center',
         justifyContent: t.chips ? 'center' : 'space-between',

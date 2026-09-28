@@ -1,4 +1,5 @@
-import type { AdContent, AdTexts, MaskCleanup } from './types'
+import type { AdContent, AdTexts, CategoryId, MaskCleanup } from './types'
+import { categoryDef } from './categories'
 
 /* القوالب تبدأ فارغة: نصوص نائبة فقط بدون صور */
 
@@ -13,27 +14,20 @@ export const DEFAULT_CLEANUP: MaskCleanup = {
   decontaminate: true,
 }
 
-export const PLACEHOLDER_TEXTS: AdTexts = {
-  title: 'PRODUCT NAME',
-  subtitle: 'SHORT PRODUCT DESCRIPTION',
-  tagline: 'اكتب هنا جملة تسويقية عن المنتج',
-  note: 'سطر إضافي للتفاصيل',
-  badge: 'جديد',
-  features: ['ميزة أولى', 'ميزة ثانية', 'ميزة ثالثة'],
-  price: '000$',
-  kicker: 'وصل حديثاً',
-}
+export const PLACEHOLDER_TEXTS: AdTexts = categoryDef('ads').placeholders
 
 export function cloneContent(c: AdContent): AdContent {
   return JSON.parse(JSON.stringify(c))
 }
 
-export function emptyContent(partnerLogoId: string | null = null): AdContent {
+export function emptyContent(partnerLogoId: string | null = null, category: CategoryId = 'ads'): AdContent {
+  const ph = categoryDef(category).placeholders
   return {
     scene: null,
     product: null,
-    texts: { ...PLACEHOLDER_TEXTS, features: [...PLACEHOLDER_TEXTS.features] },
+    texts: { ...ph, features: [...ph.features] },
     partnerLogoId,
     extras: [],
+    answer: null,
   }
 }

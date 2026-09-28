@@ -1,7 +1,7 @@
 import type { FadeStyle, SceneFx } from '../model/types'
-import { POSTER_H, POSTER_W } from '../model/types'
 import type { Rect } from './geometry'
 import { useEdit } from './EditContext'
+import { useCanvas } from './CanvasContext'
 
 /** تدرج الشفافية: 100% في الأسفل ← قيمة الأعلى (0–30%) مع منحنى ناعم */
 export function fadeMask(f: FadeStyle): string {
@@ -39,6 +39,7 @@ interface Props {
 
 export function SceneLayer({ url, rect, fade, fx }: Props) {
   const edit = useEdit()
+  const { w: POSTER_W, h: POSTER_H } = useCanvas()
   const mask = fade.enabled ? fadeMask(fade) : undefined
   const featherTop = rect.y > 1
   const featherSides = rect.x > 1 || rect.x + rect.w < POSTER_W - 1

@@ -1,8 +1,8 @@
 import type { BrandConfig, LogoVariant, PartnerLogo, PartnerVariant } from '../model/types'
-import { POSTER_W } from '../model/types'
 import { LkgtLogo, LOGO_ASPECT } from '../brand/LkgtLogo'
 import { isSel, useEdit } from './EditContext'
 import { useAsset, resolvePublic } from '../lib/assets'
+import { useCanvas } from './CanvasContext'
 
 const PARTNER_FILTER: Record<PartnerVariant, string | undefined> = {
   original: undefined,
@@ -16,10 +16,14 @@ interface Props {
   partnerVariant: PartnerVariant
   partner: PartnerLogo | undefined
   ghost?: boolean
+  hideLkgt?: boolean
+  hidePartner?: boolean
 }
 
-export function Logos({ brand, lkgt, partnerVariant, partner, ghost }: Props) {
+export function Logos({ brand, lkgt, partnerVariant, partner, ghost, hideLkgt, hidePartner }: Props) {
   const edit = useEdit()
+  const cv = useCanvas()
+  const safeTop = cv.safeTop ?? 0
   const custom = useAsset(brand.customLogoAssetId)
   const partnerAsset = useAsset(partner && !partner.builtIn ? partner.src : null)
   const lkSide = brand.logoSide
@@ -30,9 +34,10 @@ export function Logos({ brand, lkgt, partnerVariant, partner, ghost }: Props) {
 
   return (
     <>
-      <div
+      {!hideLkgt && <div
         className="lk-logo"
-        style={{ position: 'absolute', top: brand.logo.top, [lkSide]: brand.logo.side, width: w, height: h }}
+        data-eid="logo"
+        style={{ position: 'absolute', top: brand.logo.top + safeTop, [lkSide]: brand.logo.side, width: w, height: h, zIndex: 6 }}
         onPointerDown={
           edit
             ? (e) => {
@@ -48,13 +53,14 @@ export function Logos({ brand, lkgt, partnerVariant, partner, ghost }: Props) {
           <LkgtLogo variant={lkgt} height={h} style={{ display: 'block' }} />
         )}
         {edit && isSel(edit.selection, { kind: 'logo' }) && <div className="lk-sel" style={{ inset: -6 }} data-label="شعار LKGT (ثابت)" />}
-      </div>
+      </div>}
 
-      <div
+      {!hidePartner && <div
         className="lk-partner"
+        data-eid="partner"
         style={{
           position: 'absolute',
-          top: brand.partner.top,
+          top: brand.partner.top + safeTop,
           [pSide]: brand.partner.side,
           width: brand.partner.maxW,
           height: brand.partner.maxH,
@@ -62,6 +68,7 @@ export function Logos({ brand, lkgt, partnerVariant, partner, ghost }: Props) {
           alignItems: 'center',
           justifyContent: pSide === 'left' ? 'flex-start' : 'flex-end',
           pointerEvents: edit ? 'auto' : 'none',
+          zIndex: 6,
         }}
         onPointerDown={
           edit
@@ -83,9 +90,8 @@ export function Logos({ brand, lkgt, partnerVariant, partner, ghost }: Props) {
           <div className="lk-ghost">لوغو الشريك</div>
         ) : null}
         {edit && isSel(edit.selection, { kind: 'partner' }) && <div className="lk-sel" style={{ inset: -6 }} data-label="لوغو الشريك" />}
-      </div>
+      </div>}
     </>
   )
 }
 
-export const POSTER_CENTER = POSTER_W / 2
