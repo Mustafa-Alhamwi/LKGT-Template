@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, ArrowLeftRight, Check, Eye, EyeOff, HardDriveDownload, Loader2, Trash2, Upload, X } from 'lucide-react'
+import { AlertTriangle, ArrowLeftRight, Check, Download, Eye, EyeOff, HardDriveDownload, Loader2, ShieldCheck, Trash2, Upload, X } from 'lucide-react'
 import { saveAsTemplate, setPrefs, toast, useEditor } from '../store/editor'
 import { buildCommands, formatKeys, keysFor } from '../lib/commands'
 import { AR_WEIGHTS, LAT_WEIGHTS, UI_WEIGHTS, canQueryLocalFonts, clearImportedFonts, importFontFiles, importFromDevice } from '../lib/fonts'
@@ -7,6 +7,7 @@ import { Btn, Chips } from '../ui/kit'
 import { pickFile } from '../lib/importer'
 import { reloadFonts } from '../lib/fontBoot'
 import { AI_MODELS, testClaude } from '../lib/claude'
+import { canInstall, installApp, onInstallChange } from '../lib/pwa'
 
 export function Modal({ title, children, onClose, wide }: { title: string; children: React.ReactNode; onClose: () => void; wide?: boolean | 'xl' }) {
   return (
@@ -198,8 +199,62 @@ function AiTab() {
   )
 }
 
+function AppTab() {
+  const [, force] = useState(0)
+  const [usage, setUsage] = useState<{ used: number; quota: number } | null>(null)
+  const [persisted, setPersisted] = useState<boolean | null>(null)
+  useEffect(() => onInstallChange(() => force((x) => x + 1)), [])
+  useEffect(() => {
+    void navigator.storage?.estimate?.().then((e) => setUsage({ used: e.usage ?? 0, quota: e.quota ?? 0 }))
+    void navigator.storage?.persisted?.().then(setPersisted)
+  }, [])
+  const mb = (n: number) => `${(n / 1024 / 1024).toFixed(n > 1e9 ? 0 : 1)} MB`
+  const standalone = window.matchMedia?.('(display-mode: standalone)').matches
+  const offline = !!navigator.serviceWorker?.controller
+  return (
+    <div className="settings-block">
+      <p>
+        يعمل LKGT Studio كتطبيق ويب تقدّمي (PWA): يُثبَّت على الجهاز ويعمل <b>بدون إنترنت</b> بعد أول تشغيل. أول مرة فقط يحتاج الإنترنت لتحميل نموذج التفريغ الذكي (يُحفظ بعدها).
+      </p>
+      <div className="app-rows">
+        <div>
+          <span>حالة التثبيت</span>
+          <b>{standalone ? 'مثبّت ✓' : canInstall() ? 'جاهز للتثبيت' : 'يعمل داخل المتصفح'}</b>
+        </div>
+        <div>
+          <span>العمل دون اتصال</span>
+          <b>{offline ? 'جاهز ✓' : import.meta.env.DEV ? 'مُعطَّل في وضع التطوير' : 'يُفعَّل بعد إعادة فتح الصفحة'}</b>
+        </div>
+        <div>
+          <span>مساحة التخزين المستخدمة</span>
+          <b dir="ltr">{usage ? `${mb(usage.used)} / ${mb(usage.quota)}` : '—'}</b>
+        </div>
+      </div>
+      <div className="row-btns">
+        {canInstall() && (
+          <Btn variant="primary" icon={<Download size={15} />} onClick={() => void installApp()}>
+            تثبيت كتطبيق
+          </Btn>
+        )}
+        <Btn
+          icon={<ShieldCheck size={15} />}
+          disabled={persisted === true}
+          onClick={async () => {
+            const ok = await navigator.storage?.persist?.()
+            setPersisted(!!ok)
+            toast(ok ? 'أصبح تخزين مشاريعك محمياً من الحذف التلقائي ✓' : 'لم يمنح المتصفح الحماية الدائمة — ثبّت البرنامج كتطبيق ثم أعد المحاولة', ok ? 'ok' : 'info', 5000)
+          }}
+        >
+          {persisted ? 'التخزين محمي ✓' : 'حماية بياناتي من الحذف التلقائي'}
+        </Btn>
+      </div>
+      <p className="hint">المشاريع والصور والمكتبة تُحفظ على هذا الجهاز فقط (IndexedDB). للنسخ الاحتياطي: «ملف ← تصدير ملف المشروع (.lkgt)» لكل مشروع، وحزم الفريق من الصفحة الرئيسية للقوالب والهوية.</p>
+    </div>
+  )
+}
+
 export function SettingsDialog() {
-  const [tab, setTab] = useState<'fonts' | 'brand' | 'ai'>('fonts')
+  const [tab, setTab] = useState<'fonts' | 'brand' | 'ai' | 'app'>('fonts')
   const fonts = useEditor((s) => s.fonts)
   const missing = fonts && [fonts.ui, fonts.ar, fonts.lat].some((g) => Object.values(g).every((v) => v === 'missing'))
   return (
@@ -215,12 +270,14 @@ export function SettingsDialog() {
           { value: 'fonts', label: 'الخطوط' },
           { value: 'brand', label: 'الهوية الثابتة' },
           { value: 'ai', label: 'الذكاء الاصطناعي' },
+          { value: 'app', label: 'التطبيق' },
         ]}
         onChange={setTab}
       />
       {tab === 'fonts' && <FontsTab />}
       {tab === 'brand' && <BrandTab />}
       {tab === 'ai' && <AiTab />}
+      {tab === 'app' && <AppTab />}
     </Modal>
   )
 }

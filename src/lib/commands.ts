@@ -3,6 +3,8 @@ import { FORMATS } from '../model/formats'
 import { copySelection, deleteSelection, duplicateSelection, nextSlide, orderSelection, pasteClip, selectAll, toggleLockSelection } from '../store/actions'
 import { copyTextStyle, pasteTextStyle } from '../store/editor'
 import { exportCurrent } from './actions'
+import { TOOL_ITEMS } from '../editor/toolItems'
+import { canInstall, installApp } from './pwa'
 
 /* ------------------------------------------------------------------
  * سجل الأوامر: يغذي الاختصارات (قابلة للتخصيص) ولوحة الأوامر Ctrl+K
@@ -114,6 +116,10 @@ export function buildCommands(): Command[] {
     { id: 'addImage', label: 'إضافة صورة أو منتج إضافي', group: 'إضافة', run: () => useEditor.setState({ library_: 'images' }), enabled: inEditor },
     { id: 'addProduct', label: 'مكتبة المنتجات', group: 'إضافة', run: () => useEditor.setState({ library_: 'products' }), enabled: inEditor },
   ]
+  for (const it of TOOL_ITEMS) list.push({ id: `tool-${it.id}`, label: it.label, group: 'أدوات ذكية', keywords: it.id, run: it.run, enabled: inEditor })
+  list.push({ id: 'batch', label: 'توليد جماعي من جدول وصور…', group: 'أدوات ذكية', keywords: 'csv excel دفعة batch', run: () => useEditor.setState({ dialog: 'batch' }) })
+  list.push({ id: 'calendar', label: 'تقويم المحتوى', group: 'أدوات ذكية', keywords: 'جدولة نشر calendar', run: () => useEditor.setState({ dialog: 'calendar' }) })
+  if (canInstall()) list.push({ id: 'install', label: 'تثبيت البرنامج كتطبيق', group: 'أدوات', run: () => void installApp() })
   for (const f of FORMATS) list.push({ id: `fmt-${f.id}`, label: `تحويل المقاس إلى ${f.name} (${f.sub})`, group: 'المقاس', keywords: 'حجم ستوري مربع size', run: () => void setFormat(f.id), enabled: inEditor })
   for (const t of allTemplates(s)) list.push({ id: `tpl-${t.id}`, label: `قالب: ${t.name}`, group: 'القوالب', keywords: `${t.nameEn} ${t.tags.join(' ')}`, run: () => applyTemplate(t.id), enabled: inEditor })
   void switchSlide

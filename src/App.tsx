@@ -18,6 +18,9 @@ import { CopyDialog } from './panels/CopyDialog'
 const CutoutStudio = lazy(() => import('./cutout/CutoutStudio'))
 const RetouchDialog = lazy(() => import('./panels/RetouchDialog'))
 const ExportDialog = lazy(() => import('./panels/ExportDialog'))
+const BatchDialog = lazy(() => import('./panels/BatchDialog'))
+const CalendarDialog = lazy(() => import('./panels/CalendarDialog'))
+const ReviewDialog = lazy(() => import('./panels/ReviewDialog'))
 
 function Toasts() {
   const toasts = useEditor((s) => s.toasts)
@@ -192,6 +195,21 @@ export default function App() {
       {dialog === 'suggest' && <SuggestDialog />}
       {dialog === 'reference' && <ReferenceDialog />}
       {dialog === 'copy' && <CopyDialog />}
+      {dialog === 'review' && (
+        <Suspense fallback={null}>
+          <ReviewDialog />
+        </Suspense>
+      )}
+      {dialog === 'calendar' && (
+        <Suspense fallback={null}>
+          <CalendarDialog />
+        </Suspense>
+      )}
+      {dialog === 'batch' && (
+        <Suspense fallback={null}>
+          <BatchDialog />
+        </Suspense>
+      )}
       {dialog === 'export' && (
         <Suspense fallback={null}>
           <ExportDialog />

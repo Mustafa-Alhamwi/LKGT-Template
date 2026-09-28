@@ -93,6 +93,33 @@ export async function saveProjectNow(withThumb = false): Promise<void> {
   await idbSet(s.projectId, meta, metaStore)
 }
 
+/** ينشئ مشروعاً محفوظاً من تصاميم جاهزة دون فتحه (للتوليد الجماعي) */
+export async function createProjectRecord(name: string, slides: Design[]): Promise<string> {
+  const id = `p_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`
+  const first = slides[0]
+  const meta: ProjectMeta = {
+    id,
+    name,
+    created: Date.now(),
+    updated: Date.now(),
+    slideCount: slides.length,
+    canvas: canvasOf(first),
+    category: first.category ?? 'ads',
+    templateId: first.templateId,
+    thumb: await makeThumb(first),
+  }
+  const data: ProjectData = { id, name, created: meta.created, slides, slideIndex: 0 }
+  await idbSet(id, data, dataStore)
+  await idbSet(id, meta, metaStore)
+  return id
+}
+
+/** شرائح مشروع محفوظ (دون فتحه) */
+export async function getProjectSlides(id: string): Promise<Design[] | null> {
+  const d = (await get(id, dataStore)) as ProjectData | undefined
+  return d ? d.slides : null
+}
+
 export async function listProjects(): Promise<ProjectMeta[]> {
   const ids = (await keys(metaStore)) as string[]
   const all = await Promise.all(ids.map((id) => get(id, metaStore) as Promise<ProjectMeta | undefined>))

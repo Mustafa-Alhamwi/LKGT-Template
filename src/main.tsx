@@ -11,8 +11,12 @@ import './styles/app.css'
 import './styles/poster.css'
 import App from './App'
 import { bootFonts } from './lib/fontBoot'
+import { initPwa } from './lib/pwa'
+import { installApi } from './lib/api'
 
 bootFonts()
+initPwa()
+installApi()
 import('./store/projects').then((m) => m.startAutosave())
 
 createRoot(document.getElementById('root')!).render(

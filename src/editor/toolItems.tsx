@@ -1,8 +1,9 @@
-import { Boxes, Eraser, GalleryHorizontal, History, ImageIcon, Palette, PenLine, ShieldCheck, Sparkles } from 'lucide-react'
+import { Boxes, CalendarPlus, ClipboardCheck, Eraser, GalleryHorizontal, History, ImageIcon, Palette, PenLine, ShieldCheck, Sparkles, Table2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useEditor, type Dialog } from '../store/editor'
 import { openKits } from '../store/lock'
 import { openRetouch } from '../store/retouch'
+import { openCalendar } from '../store/calendar'
 
 /** عناصر قائمة «أدوات» في المحرر — تُضاف الأدوات الذكية هنا */
 export interface ToolItem {
@@ -23,5 +24,8 @@ export const TOOL_ITEMS: ToolItem[] = [
   { id: 'reference', label: 'تصميم من صورة مرجعية', icon: <ImageIcon size={15} />, run: dlg('reference') },
   { id: 'carousel', label: 'كاروسيل من نص (شريحة لكل فقرة)', icon: <GalleryHorizontal size={15} />, run: dlg('carousel') },
   { id: 'kits', label: 'مجموعات الهوية والألوان', icon: <Boxes size={15} />, run: openKits },
+  { id: 'calendar', label: 'إضافة هذا التصميم إلى تقويم المحتوى', icon: <CalendarPlus size={15} />, run: () => openCalendar({ addCurrent: true }) },
+  { id: 'batchTool', label: 'توليد جماعي من جدول وصور', icon: <Table2 size={15} />, run: dlg('batch') },
+  { id: 'review', label: 'إرسال للمراجعة والاعتماد', icon: <ClipboardCheck size={15} />, run: dlg('review') },
   { id: 'versions', label: 'سجل النسخ والاستعادة', icon: <History size={15} />, run: dlg('versions') },
 ]
