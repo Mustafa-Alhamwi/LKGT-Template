@@ -124,6 +124,7 @@ export default function BatchDialog() {
   const start = async () => {
     if (busy || !rows.length) return
     if (!exportImages && !saveProjects) return toast('اختر إخراجاً واحداً على الأقل: صور أو مشاريع', 'info')
+    if (rows.length * (exportImages ? formats.length : 1) > 120 && !confirm(`ستُنشأ ${rows.length * formats.length} صورة دفعة واحدة وقد يستهلك ذلك ذاكرة الجهاز. الأفضل تقسيم الجدول إلى دفعات أصغر (نحو 100). متابعة على أي حال؟`)) return
     ctl.current = { cancelled: false }
     setBusy({ done: 0, total: rows.length, label: 'جارِ البدء…' })
     try {

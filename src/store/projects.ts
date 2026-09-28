@@ -65,7 +65,21 @@ export async function makeThumb(design: Design): Promise<string | undefined> {
   }
 }
 
+let saveFailWarned = false
+
 export async function saveProjectNow(withThumb = false): Promise<void> {
+  try {
+    await saveProjectCore(withThumb)
+  } catch (e) {
+    console.error('autosave failed', e)
+    if (!saveFailWarned) {
+      saveFailWarned = true
+      toast('تعذّر الحفظ التلقائي للمشروع — قد تكون مساحة التخزين ممتلئة. صدّر ملف المشروع (.lkgt) للاحتفاظ بنسخة.', 'error', 9000)
+    }
+  }
+}
+
+async function saveProjectCore(withThumb = false): Promise<void> {
   const s = useEditor.getState()
   const slides = syncedSlides(s)
   if (!isWorthSaving(slides)) return

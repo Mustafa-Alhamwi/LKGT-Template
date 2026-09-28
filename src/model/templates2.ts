@@ -101,8 +101,8 @@ const truefalse: Template[] = [
     ],
     text: qaText({
       kicker: { color: RED, decoStyle: { fill: WHITE, radius: 999, padX: 36, padY: 10, full: false, shadow: true } },
-      title: { color: WHITE },
-      tagline: { color: '#FFE3E1' },
+      title: { color: WHITE, accent: YELLOW },
+      tagline: { color: '#FFE3E1', accent: YELLOW },
       note: { color: '#FFD9DC' },
       cta: { color: '#FFE3E1' },
     }),
@@ -155,8 +155,8 @@ const truefalse: Template[] = [
 
 /* ============================== حقيقة أم خرافة ============================== */
 
-const stampA = () => stk('b:stamp-r', 350, 850, 380, 154, GREEN, GREEN, 'حقيقة', { showWhen: 'a', rotate: -8, layer: 'top' })
-const stampB = () => stk('b:stamp', 415, 805, 250, 250, CRIMSON, CRIMSON, 'خرافة', { showWhen: 'b', rotate: 8, layer: 'top' })
+const stampA = () => stk('b:stamp-r', 350, 905, 380, 154, GREEN, GREEN, 'حقيقة', { showWhen: 'a', rotate: -8, layer: 'top' })
+const stampB = () => stk('b:stamp', 415, 825, 250, 250, CRIMSON, CRIMSON, 'خرافة', { showWhen: 'b', rotate: 8, layer: 'top' })
 
 const factmyth: Template[] = [
   tplc('factmyth', 'fm-clean', 'نظيف', 'Clean', ['فاتح', 'ختم', 'بسيط'], {

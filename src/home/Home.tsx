@@ -124,11 +124,13 @@ const fmtRel = (t: number) => {
 
 function Projects() {
   const view = useEditor((s) => s.view)
+  const dialog = useEditor((s) => s.dialog)
   const [list, setList] = useState<ProjectMeta[] | null>(null)
   const load = () => listProjects().then(setList)
+  // تُحدَّث القائمة عند دخول الرئيسية وبعد إغلاق أي نافذة (مثل التوليد الجماعي)
   useEffect(() => {
-    if (view === 'home') void load()
-  }, [view])
+    if (view === 'home' && !dialog) void load()
+  }, [view, dialog])
   if (!list || !list.length) return null
   return (
     <section className="projects">
