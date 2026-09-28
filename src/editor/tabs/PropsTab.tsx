@@ -5,11 +5,15 @@ import { BlockControls, TextControls } from '../controls/text'
 import { ProductControls, SceneControls } from '../controls/product'
 import { ContactControls, DecorControls, LogoControls, ShapeControls } from '../controls/design'
 import { MultiControls } from '../controls/multi'
+import { BrandLockNotice } from '../controls/lockNotice'
+import { useBrandLocked } from '../../store/lock'
 
 export function PropsTab() {
   const sel = useEditor((s) => s.selection)
   const multi = useEditor((s) => s.multi)
+  const locked = useBrandLocked()
   if (multi.length > 1) return <MultiControls />
+  if (locked && sel && (sel.kind === 'contact' || sel.kind === 'partner' || sel.kind === 'logo')) return <BrandLockNotice />
   if (!sel) {
     return (
       <Empty icon={<MousePointerClick size={30} />} title="لم تحدد عنصراً" text="انقر على أي عنصر في التصميم لتعديل خصائصه هنا، أو اختر من الأزرار:">

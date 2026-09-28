@@ -48,7 +48,7 @@ export function ProductLayer({ product, cutout, bbox, fx, busy }: Props) {
   const contactH = Math.max(26, b.w * 0.1)
 
   return (
-    <div className="lk-layer" style={{ pointerEvents: 'none' }}>
+    <div className="lk-layer" data-layer="product" style={{ pointerEvents: 'none' }}>
       {fx.shadow === 'contact' && (
         <div
           style={{

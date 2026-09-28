@@ -96,5 +96,5 @@ export function backdropCss(b: BackdropStyle): React.CSSProperties {
 }
 
 export function Backdrop({ style }: { style: BackdropStyle }) {
-  return <div className="lk-layer" style={backdropCss(style)} />
+  return <div className="lk-layer" data-layer="backdrop" style={backdropCss(style)} />
 }

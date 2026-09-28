@@ -54,6 +54,7 @@ export function SceneLayer({ url, rect, fade, fx }: Props) {
   return (
     <div
       className="lk-layer"
+      data-layer="scene"
       style={{ WebkitMaskImage: mask, maskImage: mask }}
       onPointerDown={edit ? (e) => edit.startDrag({ kind: 'scene' }, e) : undefined}
       data-hit={edit ? 'scene' : undefined}

@@ -36,6 +36,7 @@ export function Logos({ brand, lkgt, partnerVariant, partner, ghost, hideLkgt, h
     <>
       {!hideLkgt && <div
         className="lk-logo"
+        data-layer="chrome"
         data-eid="logo"
         style={{ position: 'absolute', top: brand.logo.top + safeTop, [lkSide]: brand.logo.side, width: w, height: h, zIndex: 6 }}
         onPointerDown={
@@ -57,6 +58,7 @@ export function Logos({ brand, lkgt, partnerVariant, partner, ghost, hideLkgt, h
 
       {!hidePartner && <div
         className="lk-partner"
+        data-layer="chrome"
         data-eid="partner"
         style={{
           position: 'absolute',

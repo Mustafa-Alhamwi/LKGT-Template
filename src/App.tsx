@@ -10,6 +10,9 @@ import { deleteSelection, nudgeSelection } from './store/actions'
 import { addImageFile } from './store/objects'
 import { CommandPalette } from './panels/CommandPalette'
 import { VersionsDialog } from './panels/VersionsDialog'
+import { KitsDialog } from './panels/KitsDialog'
+import { CarouselDialog } from './panels/CarouselDialog'
+import { CheckDialog, PaletteDialog, ReferenceDialog, SuggestDialog } from './panels/SmartDialogs'
 
 const CutoutStudio = lazy(() => import('./cutout/CutoutStudio'))
 
@@ -179,6 +182,12 @@ export default function App() {
       {dialog === 'shortcuts' && <ShortcutsDialog />}
       {dialog === 'commands' && <CommandPalette />}
       {dialog === 'versions' && <VersionsDialog />}
+      {dialog === 'kits' && <KitsDialog />}
+      {dialog === 'carousel' && <CarouselDialog />}
+      {dialog === 'check' && <CheckDialog />}
+      {dialog === 'palette' && <PaletteDialog />}
+      {dialog === 'suggest' && <SuggestDialog />}
+      {dialog === 'reference' && <ReferenceDialog />}
       {dialog === 'cutout' && (
         <Suspense fallback={null}>
           <CutoutStudio />

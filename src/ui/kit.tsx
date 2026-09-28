@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { alphaOf, toHex, withAlpha } from '../lib/color'
+import { useEditor } from '../store/editor'
 
 /* ------------------------------------------------------------------
  * عناصر الواجهة — بسيطة ومتسقة: صف واحد لكل خيار، بدون صناديق متداخلة
@@ -272,6 +273,7 @@ export function ColorInput({ label, value, onChange, alpha = false }: { label: s
   const btn = useRef<HTMLButtonElement>(null)
   const a = alphaOf(value)
   const hex = toHex(value)
+  const kitColors = useEditor((s) => s.brand.palette)
   const emit = (h: string, al: number) => onChange(al >= 0.999 ? h.toUpperCase() : withAlpha(h, al))
   return (
     <div className="fld">
@@ -288,6 +290,17 @@ export function ColorInput({ label, value, onChange, alpha = false }: { label: s
             pushRecent(hex.toUpperCase())
           }}
         >
+          {kitColors?.length > 0 && (
+            <>
+              <small className="pal-title">ألوان الهوية</small>
+              <div className="pal">
+                {kitColors.map((c) => (
+                  <button key={c} type="button" style={{ background: c }} title={c} className={c.toLowerCase() === hex ? 'on' : ''} onClick={() => emit(c, a)} />
+                ))}
+              </div>
+            </>
+          )}
+          <small className="pal-title">ألوان عامة</small>
           <div className="pal">
             {PALETTE.map((c) => (
               <button key={c} type="button" style={{ background: c }} title={c} className={c.toLowerCase() === hex ? 'on' : ''} onClick={() => emit(c, a)} />

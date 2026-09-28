@@ -1,5 +1,7 @@
 import type { BrandConfig, ContactTheme } from '../model/types'
-import { GlobeIcon, InstagramIcon, PhoneIcon } from './icons'
+import { GlobeIcon, InstagramIcon, MailIcon, PhoneIcon, PinIcon, WhatsappIcon } from './icons'
+import { measure100 } from '../lib/textFit'
+import { useEditor } from '../store/editor'
 import { isSel, useEdit } from './EditContext'
 import { useCanvas } from './CanvasContext'
 import { latFamily, AR_FAMILY, FALLBACK } from '../lib/fonts'
@@ -175,11 +177,22 @@ export function ContactBar({ brand, theme, mode, accent }: Props) {
     whiteSpace: 'nowrap',
     lineHeight: 1,
   }
-  const items = [
-    { key: 'web', icon: <GlobeIcon size={iconSize} color={t.icon} />, text: brand.website },
-    { key: 'ig', icon: <InstagramIcon size={iconSize} color={t.icon} />, text: brand.instagram },
-    { key: 'ph', icon: <PhoneIcon size={iconSize} color={t.icon} />, text: brand.phone },
-  ].filter((i) => i.text.trim())
+  const ALL = {
+    web: { icon: <GlobeIcon size={iconSize} color={t.icon} />, text: brand.website },
+    ig: { icon: <InstagramIcon size={iconSize} color={t.icon} />, text: brand.instagram },
+    ph: { icon: <PhoneIcon size={iconSize} color={t.icon} />, text: brand.phone },
+    wa: { icon: <WhatsappIcon size={iconSize} color={t.icon} />, text: brand.whatsapp ?? '' },
+    mail: { icon: <MailIcon size={iconSize} color={t.icon} />, text: brand.email ?? '' },
+    addr: { icon: <PinIcon size={iconSize} color={t.icon} />, text: brand.address ?? '' },
+  } as const
+  const order = brand.contactItems ?? (['web', 'ig', 'ph'] as const)
+  const items = order.map((k) => ({ key: k, ...ALL[k] })).filter((i) => (i.text ?? '').trim())
+  // نصغّر الخط تلقائياً إذا لم تتسع العناصر في الشريط
+  const fv = useEditor.getState().fontsVersion
+  const inner = w - (t.fullBleed ? (POSTER_W - w) + 72 : t.iconBadge ? 64 : t.chips ? 0 : 80)
+  const need = items.reduce((s, i) => s + (measure100(i.text!, { weightAr: 700, weightLat: 700, tracking: 0, uppercase: false }, fv) * fontSize) / 100 + iconSize + 14 + (t.chips ? 48 : 34), 0)
+  const fs = need > inner && !t.chips ? Math.max(12, fontSize * (inner / need)) : fontSize
+  font.fontSize = fs
 
   const renderIcon = (icon: React.ReactNode) =>
     t.iconBadge ? (
@@ -206,6 +219,7 @@ export function ContactBar({ brand, theme, mode, accent }: Props) {
   return (
     <div
       className="lk-contact"
+      data-layer="chrome"
       data-eid="contact"
       dir="ltr"
       style={{

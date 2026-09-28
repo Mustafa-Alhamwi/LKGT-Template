@@ -6,6 +6,7 @@ import { backdropCss } from '../../poster/Backdrop'
 import { CONTACT_THEME_ORDER, contactThemes } from '../../poster/ContactBar'
 import { decor } from '../../model/templates'
 import { RED } from '../../model/brand'
+import { ContactFields } from './contactFields'
 import { EffectsSection, LayerSection, ObjectHeader, ObjectSpecific, TransformSection, useDecor } from './objects'
 import { isObjectKind } from '../../poster/DecorLayer'
 import { LkgtLogo } from '../../brand/LkgtLogo'
@@ -194,7 +195,6 @@ export function ContactControls() {
   const theme = useEditor((s) => s.design.style.contact.theme)
   const accent = useEditor((s) => s.design.style.contact.accent)
   const mode = useEditor((s) => s.design.style.theme)
-  const brand = useEditor((s) => s.brand)
   const themes = contactThemes(mode, accent)
   return (
     <>
@@ -217,16 +217,8 @@ export function ContactControls() {
         </div>
         <ColorInput label="اللون المميز" value={accent} onChange={(v) => changeStyle((s) => void (s.contact.accent = v), 'cacc')} />
       </Group>
-      <Group title="معلومات التواصل (لكل القوالب)">
-        <Field label="الموقع">
-          <input className="txi ltr" dir="ltr" value={brand.website} onChange={(e) => setBrand({ website: e.target.value })} />
-        </Field>
-        <Field label="إنستغرام">
-          <input className="txi ltr" dir="ltr" value={brand.instagram} onChange={(e) => setBrand({ instagram: e.target.value })} />
-        </Field>
-        <Field label="الهاتف">
-          <input className="txi ltr" dir="ltr" value={brand.phone} onChange={(e) => setBrand({ phone: e.target.value })} />
-        </Field>
+      <Group title="معلومات التواصل (لكل القوالب)" hint="اختر ما يظهر في الشريط وترتيبه. يتقلّص الخط تلقائياً إذا ازدحم الشريط.">
+        <ContactFields />
       </Group>
     </>
   )

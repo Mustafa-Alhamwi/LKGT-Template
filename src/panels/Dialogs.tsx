@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { AlertTriangle, ArrowLeftRight, Check, HardDriveDownload, Trash2, Upload, X } from 'lucide-react'
-import { saveAsTemplate, setBrand, setPrefs, toast, useEditor } from '../store/editor'
+import { saveAsTemplate, setPrefs, toast, useEditor } from '../store/editor'
 import { buildCommands, formatKeys, keysFor } from '../lib/commands'
 import { AR_WEIGHTS, LAT_WEIGHTS, UI_WEIGHTS, canQueryLocalFonts, clearImportedFonts, importFontFiles, importFromDevice } from '../lib/fonts'
-import { Btn, Chips, Slider } from '../ui/kit'
+import { Btn, Chips } from '../ui/kit'
 import { pickFile } from '../lib/importer'
 import { reloadFonts } from '../lib/fontBoot'
 
@@ -114,22 +114,13 @@ function BrandTab() {
   const brand = useEditor((s) => s.brand)
   return (
     <div className="settings-block">
-      <Btn icon={<ArrowLeftRight size={15} />} onClick={() => setBrand({ logoSide: brand.logoSide === 'right' ? 'left' : 'right' })}>
-        لوغو LKGT على {brand.logoSide === 'right' ? 'اليمين' : 'اليسار'} — تبديل
+      <p>
+        الهوية الفعّالة الآن: <b>{brand.name}</b> — تتحكم بلون القوالب ومعلومات التواصل واللوغو وأماكن العناصر الثابتة.
+      </p>
+      <Btn variant="primary" icon={<ArrowLeftRight size={15} />} onClick={() => useEditor.setState({ dialog: 'kits' })}>
+        فتح مجموعات الهوية
       </Btn>
-      <div className="grid-2">
-        <Slider label="ارتفاع لوغو LKGT" value={brand.logo.h} min={60} max={220} onChange={(v) => setBrand({ logo: { ...brand.logo, h: v } })} />
-        <Slider label="بعده عن الأعلى" value={brand.logo.top} min={0} max={200} onChange={(v) => setBrand({ logo: { ...brand.logo, top: v } })} />
-        <Slider label="بعده عن الجانب" value={brand.logo.side} min={0} max={200} onChange={(v) => setBrand({ logo: { ...brand.logo, side: v } })} />
-        <Slider label="أقصى عرض للوغو الشريك" value={brand.partner.maxW} min={100} max={400} onChange={(v) => setBrand({ partner: { ...brand.partner, maxW: v } })} />
-        <Slider label="أقصى ارتفاع للوغو الشريك" value={brand.partner.maxH} min={40} max={200} onChange={(v) => setBrand({ partner: { ...brand.partner, maxH: v } })} />
-        <Slider label="أعلى لوغو الشريك" value={brand.partner.top} min={0} max={200} onChange={(v) => setBrand({ partner: { ...brand.partner, top: v } })} />
-        <Slider label="موضع شريط التواصل (ص)" value={brand.contact.y} min={1100} max={1400} onChange={(v) => setBrand({ contact: { ...brand.contact, y: v } })} />
-        <Slider label="عرض الشريط" value={brand.contact.w} min={500} max={1040} onChange={(v) => setBrand({ contact: { ...brand.contact, w: v } })} />
-        <Slider label="ارتفاع الشريط" value={brand.contact.h} min={36} max={100} onChange={(v) => setBrand({ contact: { ...brand.contact, h: v } })} />
-        <Slider label="حجم خط الشريط" value={brand.contact.fontSize} min={16} max={40} onChange={(v) => setBrand({ contact: { ...brand.contact, fontSize: v } })} />
-      </div>
-      <p className="hint">هذه القيم ثابتة لكل القوالب (هوية موحدة) — عدّلها هنا فقط عند الحاجة.</p>
+      <p className="hint">يمكنك حفظ أكثر من مجموعة (لأكثر من علامة أو فرع) والتبديل بينها، مع إعادة تلوين القوالب تلقائياً.</p>
     </div>
   )
 }

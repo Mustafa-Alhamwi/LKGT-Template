@@ -247,6 +247,7 @@ export function ShapeLayer({ shape, box }: { shape: ShapeStyle; box: Rect | null
   return (
     <svg
       className="lk-layer"
+      data-layer="shape"
       width={POSTER_W}
       height={POSTER_H}
       viewBox={`0 0 ${POSTER_W} ${POSTER_H}`}

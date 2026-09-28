@@ -14,6 +14,7 @@ import { Logos } from './Logos'
 import { ContactBar } from './ContactBar'
 import { useEdit } from './EditContext'
 import { CanvasCtx } from './CanvasContext'
+import { categoryDef } from '../model/categories'
 
 /** أيقونة منتج نائبة للمصغّرات — لا تظهر في التصدير */
 function ProductPlaceholder({ area, dark }: { area: { x: number; y: number; w: number; h: number }; dark: boolean }) {
@@ -64,7 +65,7 @@ export const Poster = forwardRef<HTMLDivElement, Props>(function Poster(
   const area = style.productArea
   const shapeBox = bbox ?? (!content.product ? { x: area.x + area.w * 0.1, y: area.y + area.h * 0.25, w: area.w * 0.8, h: area.h * 0.75 } : null)
   const partner = partners.find((p) => p.id === content.partnerLogoId)
-  const empty = !content.scene && !content.product
+  const empty = !content.scene && !content.product && categoryDef(design.category).hasProduct
   const ghost = placeholders !== 'none'
 
   return (

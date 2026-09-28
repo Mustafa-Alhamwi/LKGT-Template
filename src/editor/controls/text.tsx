@@ -24,7 +24,8 @@ import { BLENDS } from './objects'
 import { presetPreviewCss, usePresetCtx } from '../Library'
 import { normalizeImage, putAsset } from '../../lib/assets'
 import { pickFile } from '../../lib/importer'
-import type { BlendMode } from '../../model/types'
+import type { BlendMode, ShowWhen } from '../../model/types'
+import { SHOW_WHEN_LABELS } from '../../model/showWhen'
 import { AR_WEIGHTS, LAT_WEIGHTS } from '../../lib/fonts'
 import { categoryDef } from '../../model/categories'
 import type { Decoration, FitMode, Selection, TextPanel, TextStyle } from '../../model/types'
@@ -305,6 +306,11 @@ export function TextControls({ sel }: { sel: Extract<Selection, { kind: 'text' |
               <Btn small onClick={() => set((x) => void (x.fx = Math.round(540 - (x.fw ?? 600) / 2)))}>
                 توسيط أفقي
               </Btn>
+            </Group>
+          )}
+          {cat.answers && (
+            <Group title="الظهور" hint="تحكّم بظهور هذا النص بحسب حالة التصميم: سؤال أم كشف للإجابة.">
+              <Select<ShowWhen> value={st.showWhen ?? 'always'} options={SHOW_WHEN_LABELS.map((o) => ({ value: o.value, label: o.value === 'a' ? `عندما الإجابة «${cat.answers!.a}»` : o.value === 'b' ? `عندما الإجابة «${cat.answers!.b}»` : o.label }))} onChange={(v) => set((x) => void (x.showWhen = v), 'sw')} />
             </Group>
           )}
           <Group title="المحاذاة">

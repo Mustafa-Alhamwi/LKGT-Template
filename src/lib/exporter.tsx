@@ -74,19 +74,36 @@ async function waitImages(node: HTMLElement) {
 
 const frame = () => new Promise((r) => requestAnimationFrame(() => r(null)))
 
+/** تصفية الطبقات عند الرسم: include/exclude بأسماء الطبقات (backdrop, scene, decor-back, shape, product, decor-front, text, decor-top, chrome) */
+export interface LayerFilter {
+  include?: string[]
+  exclude?: string[]
+  /** معرّفات عناصر محددة (data-eid) — للطبقات التي تحوي عناصر متعددة */
+  eids?: string[]
+}
+
 export interface ExportOptions {
   scale: number
   format: 'png' | 'jpg'
   quality?: number
+  layers?: LayerFilter
 }
 
-export async function renderDesign(
+export async function renderDesign(design: Design, brand: BrandConfig, partners: PartnerLogo[], fontsVersion: number, opts: ExportOptions): Promise<Blob> {
+  const canvas = await renderCanvas(design, brand, partners, fontsVersion, opts)
+  const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, opts.format === 'jpg' ? 'image/jpeg' : 'image/png', opts.quality ?? 0.95))
+  if (!blob) throw new Error('encode failed')
+  return blob
+}
+
+/** يرسم التصميم على canvas (بحجم اللوحة × scale) */
+export async function renderCanvas(
   design: Design,
   brand: BrandConfig,
   partners: PartnerLogo[],
   fontsVersion: number,
   opts: ExportOptions,
-): Promise<Blob> {
+): Promise<HTMLCanvasElement> {
   const status = await initFonts()
   // تجهيز الأصول قبل الرسم
   if (design.content.scene) await loadAsset(design.content.scene.assetId)
@@ -136,13 +153,21 @@ export async function renderDesign(
       cacheBust: false,
       fontEmbedCSS,
       backgroundColor: opts.format === 'jpg' ? '#ffffff' : undefined,
-      filter: (el) => !(el instanceof HTMLElement && EDITOR_ONLY.some((c) => el.classList?.contains(c))),
+      filter: (el) => {
+        if (!(el instanceof HTMLElement)) return true
+        if (EDITOR_ONLY.some((c) => el.classList?.contains(c))) return false
+        const L = opts.layers
+        if (L) {
+          const layer = el.dataset?.layer
+          if (layer) {
+            if (L.include && !L.include.includes(layer)) return false
+            if (L.exclude?.includes(layer)) return false
+          }
+        }
+        return true
+      },
     })
-    const blob = await new Promise<Blob | null>((res) =>
-      canvas.toBlob(res, opts.format === 'jpg' ? 'image/jpeg' : 'image/png', opts.quality ?? 0.95),
-    )
-    if (!blob) throw new Error('encode failed')
-    return blob
+    return canvas
   } finally {
     root.unmount()
     host.remove()

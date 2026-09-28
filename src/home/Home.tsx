@@ -18,12 +18,13 @@ import {
 } from '../store/editor'
 import type { CategoryId, TemplateStyle } from '../model/types'
 import { TemplateGrid } from './TemplateGrid'
-import { exportTemplatesFile, importTemplatesFile } from '../lib/templateIO'
+import { exportPack, importPack } from '../lib/packIO'
 import { pickFile } from '../lib/importer'
 import { COLOR_FAMILIES, familyOf, type ColorFam } from '../lib/color'
 import { Menu, MenuItem } from '../ui/kit'
 import { deleteProjectById, duplicateProjectById, importProjectFile, listProjects, openProjectById, renameProjectById, type ProjectMeta } from '../store/projects'
 import { categoryDef } from '../model/categories'
+import { openKits } from '../store/lock'
 
 export type Filter = 'all' | 'fav' | 'light' | 'dark' | 'mine'
 
@@ -265,26 +266,25 @@ export function Home() {
                   icon={<Upload size={15} />}
                   onClick={async () => {
                     close()
-                    const [f] = await pickFile('.json,application/json')
-                    if (f) importTemplatesFile(f).catch((e) => toast(String(e), 'error'))
+                    const [f] = await pickFile('.lkpack,.json,application/zip,application/json')
+                    if (f) importPack(f).catch((e) => toast(String(e), 'error'))
                   }}
                 >
-                  استيراد قوالب من ملف
+                  استيراد حزمة فريق (.lkpack)
                 </MenuItem>
                 <MenuItem
                   icon={<Download size={15} />}
                   onClick={() => {
                     close()
-                    if (!userTemplates.length) return toast('لا توجد قوالب خاصة بك لتصديرها', 'info')
-                    exportTemplatesFile(userTemplates).catch((e) => toast(String(e), 'error'))
+                    exportPack().catch((e) => toast(String(e), 'error'))
                   }}
                 >
-                  تصدير قوالبي لملف (للفريق)
+                  تصدير حزمة الفريق (قوالب + هوية + أنماط)
                 </MenuItem>
               </>
             )}
           </Menu>
-          <button className="ibtn" title="مجموعات الهوية" onClick={() => useEditor.setState({ dialog: 'kits' })}>
+          <button className="ibtn" title="مجموعات الهوية" onClick={openKits}>
             <Boxes size={18} />
           </button>
           <button className="ibtn" title="تقويم المحتوى" onClick={() => useEditor.setState({ dialog: 'calendar' })}>

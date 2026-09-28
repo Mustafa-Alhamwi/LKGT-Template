@@ -590,19 +590,25 @@ export function openTemplate(id: string, format?: string) {
   set(freshProject(d))
 }
 
+/** نمط القالب مُطبَّقاً على تصميم قائم (مقاس اللوحة + هوية + عناصرك المضافة) — بدون تعديل الحالة */
+export function templateStyleFor(s: EditorState, t: Template, d: Design): { style: TemplateStyle; primary: string } {
+  const cv = canvasOf(d)
+  let st = structuredClone(styleFor(s, t))
+  if (cv.w !== DEFAULT_CANVAS.w || cv.h !== DEFAULT_CANVAS.h) st = resizeStyle(st, DEFAULT_CANVAS, cv, s.brand)
+  st.decor = [...st.decor, ...d.style.decor.filter((x) => x.carry)]
+  return { style: st, primary: s.brand.recolor ? s.brand.primary : t.primary ?? RED }
+}
+
 /** تبديل القالب داخل المحرر — يبقى المحتوى كما هو (وكذلك العناصر التي أضفتها) */
 export function applyTemplate(id: string) {
   const s = get()
   const t = findTemplate(s, id)
   if (!t) return
   change((d) => {
-    const cv = canvasOf(d)
-    let st = structuredClone(styleFor(s, t))
-    if (cv.w !== DEFAULT_CANVAS.w || cv.h !== DEFAULT_CANVAS.h) st = resizeStyle(st, DEFAULT_CANVAS, cv, s.brand)
-    st.decor = [...st.decor, ...d.style.decor.filter((x) => x.carry)]
+    const r = templateStyleFor(s, t, d)
     d.templateId = t.id
-    d.style = st
-    d.primary = s.brand.recolor ? s.brand.primary : t.primary ?? RED
+    d.style = r.style
+    d.primary = r.primary
     if (t.category !== (d.category ?? 'ads')) {
       if (!d.touched) {
         const keep = d.content.partnerLogoId

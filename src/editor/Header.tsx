@@ -307,11 +307,11 @@ function ToolsMenu() {
         <>
           {TOOL_ITEMS.map((it) => (
             <MenuItem
-              key={it.dialog}
+              key={it.id}
               icon={it.icon}
               onClick={() => {
                 close()
-                useEditor.setState({ dialog: it.dialog })
+                it.run()
               }}
             >
               {it.label}

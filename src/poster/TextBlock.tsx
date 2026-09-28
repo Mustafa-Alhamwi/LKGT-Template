@@ -421,6 +421,7 @@ function FreeText({ id, sel, st, value, fontsVersion, features }: { id: string; 
   return (
     <div
       className="lk-free"
+      data-layer="text"
       dir="ltr"
       style={{
         position: 'absolute',
@@ -495,6 +496,7 @@ export function TextBlock({ tb, texts, extras, fontsVersion, answer }: Props) {
       {(flow.length > 0 || edit) && (
         <div
           className="lk-textblock"
+          data-layer="text"
           data-eid="block"
           style={{
             position: 'absolute',
