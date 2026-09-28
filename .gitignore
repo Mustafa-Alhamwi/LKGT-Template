@@ -1,0 +1,6 @@
+node_modules
+dist
+*.local
+.DS_Store
+# نموذج التفريغ (يُنزَّل بالأمر npm run model:offline)
+public/imgly
