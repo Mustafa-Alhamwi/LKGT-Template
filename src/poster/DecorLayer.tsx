@@ -3,7 +3,7 @@ import { isSel, useEdit } from './EditContext'
 import { StickerView, findSticker } from './stickers'
 import { QrView } from './QrCode'
 import { ImageBody } from './ImageObject'
-import { showWhenOk } from '../model/showWhen'
+import { showIfOk, showWhenOk } from '../model/showWhen'
 import { noiseUrl } from './Backdrop'
 import { withAlpha } from '../lib/color'
 import { fontStack } from '../lib/fonts'
@@ -287,7 +287,7 @@ function Handles({ id, keepAspect }: { id: string; keepAspect: boolean }) {
 
 export function DecorLayer({ items, layer, texts, answer }: { items: DecorItem[]; layer: 'back' | 'front' | 'top'; texts: AdTexts; answer?: 'a' | 'b' | null }) {
   const edit = useEdit()
-  const list = items.filter((d) => d.layer === layer && d.visible && showWhenOk(d.showWhen, answer))
+  const list = items.filter((d) => d.layer === layer && d.visible && showWhenOk(d.showWhen, answer) && showIfOk(d.showIf, texts))
   if (!list.length) return null
   return (
     <div className="lk-layer" data-layer={`decor-${layer}`} style={{ pointerEvents: 'none', zIndex: layer === 'top' ? 5 : undefined }}>

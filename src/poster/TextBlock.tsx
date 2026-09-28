@@ -2,7 +2,7 @@ import { useId, useLayoutEffect, useRef } from 'react'
 import type { AdTexts, ExtraText, Selection, TextBlockStyle, TextKey, TextStyle } from '../model/types'
 import { isSel, useEdit } from './EditContext'
 import { fitLines, measure100, parseRich, stripMarks } from '../lib/textFit'
-import { showWhenOk } from '../model/showWhen'
+import { showIfOk, showWhenOk } from '../model/showWhen'
 import { useAsset } from '../lib/assets'
 import { fontStack, isArabicText } from '../lib/fonts'
 import { alphaOf, contrastRatio, withAlpha } from '../lib/color'
@@ -480,7 +480,7 @@ export function TextBlock({ tb, texts, extras, fontsVersion, answer }: Props) {
     const st = tb.items[k]
     if (!st?.visible) return false
     if (edit?.editing === k) return true
-    if (!showWhenOk(st.showWhen, answer)) return false
+    if (!showWhenOk(st.showWhen, answer) || !showIfOk(st.showIf, texts)) return false
     return textValue(texts, k).trim() !== ''
   }
   const flow = tb.order.filter((k) => shown(k) && !tb.items[k].free)
@@ -551,7 +551,7 @@ export function TextBlock({ tb, texts, extras, fontsVersion, answer }: Props) {
         <FreeText key={k} id={k} sel={{ kind: 'text', key: k }} st={tb.items[k]} value={textValue(texts, k)} fontsVersion={fontsVersion} features={k === 'features'} />
       ))}
       {extras
-        .filter((e) => e.style.visible !== false && showWhenOk(e.style.showWhen, answer))
+        .filter((e) => e.style.visible !== false && showWhenOk(e.style.showWhen, answer) && showIfOk(e.style.showIf, texts))
         .map((e) => (
           <FreeText key={e.id} id={e.id} sel={{ kind: 'extra', id: e.id }} st={e.style} value={e.text} fontsVersion={fontsVersion} />
         ))}

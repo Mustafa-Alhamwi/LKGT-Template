@@ -10,6 +10,7 @@ import { categoryOf } from '../../model/categories'
 import { centerDecor, cutoutImageObject, duplicateDecor, orderDecor, removeDecor, setDecorLayer, updateDecor } from '../../store/objects'
 import { pickFile } from '../../lib/importer'
 import { SHOW_WHEN_LABELS } from '../../model/showWhen'
+import { ShowIfControl } from './showIf'
 import type { ShowWhen } from '../../model/types'
 import { normalizeImage, putAsset } from '../../lib/assets'
 import { changeContent } from '../../store/editor'
@@ -359,6 +360,7 @@ export function LayerSection({ item }: { item: DecorItem }) {
           <Select<ShowWhen> value={item.showWhen ?? 'always'} options={SHOW_WHEN_LABELS.map((o) => ({ value: o.value, label: o.value === 'a' ? `عندما الإجابة «${cat.answers!.a}»` : o.value === 'b' ? `عندما الإجابة «${cat.answers!.b}»` : o.label }))} onChange={(v) => updateDecor(item.id, (x) => void (x.showWhen = v))} />
         </Field>
       )}
+      <ShowIfControl rule={item.showIf} cat={cat} onChange={(r) => updateDecor(item.id, (x) => void (x.showIf = r))} />
       <Chips<DecorItem['layer']>
         value={item.layer}
         options={[

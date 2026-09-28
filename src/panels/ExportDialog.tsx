@@ -78,7 +78,7 @@ export default function ExportDialog() {
   const cv = canvasOf(design)
   const sup = useMemo(motionSupport, [])
   const [kind, setKind] = useState<Kind>('images')
-  const [scope, setScope] = useState<Scope>('current')
+  const [scope, setScope] = useState<Scope>(useEditor.getState().slides.length > 1 ? 'all' : 'current')
   // صور
   const [format, setFormat] = useState<'png' | 'jpg'>('png')
   const [quality, setQuality] = useState(92)

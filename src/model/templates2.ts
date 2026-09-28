@@ -377,7 +377,7 @@ const offers: Template[] = [
     shape: { kind: 'floor', color: '#000000', opacity: 0.2, spread: 0.32 },
     productFx: { shadow: 'soft', shadowOpacity: 0.25 },
     productArea: OF_AREA,
-    decor: [stk('b:burst', 70, 470, 300, 300, RED, WHITE, '{discount}', { layer: 'top', rotate: -10, shadow: 'soft' })],
+    decor: [stk('b:burst', 70, 470, 300, 300, RED, WHITE, '{discount}', { showIf: { key: 'discount', when: 'filled' }, layer: 'top', rotate: -10, shadow: 'soft' })],
     text: ofText(),
     contact: { theme: 'red-ring' },
   }),
@@ -389,7 +389,7 @@ const offers: Template[] = [
     productArea: OF_AREA,
     decor: [
       decor({ kind: 'glow', x: 190, y: 380, w: 700, h: 700, color: GOLD, opacity: 0.18, layer: 'back' }),
-      stk('b:seal', 70, 470, 290, 290, '#111214', GOLD, '{discount}', { layer: 'top', rotate: -8, shadow: 'soft' }),
+      stk('b:seal', 70, 470, 290, 290, '#111214', GOLD, '{discount}', { showIf: { key: 'discount', when: 'filled' }, layer: 'top', rotate: -8, shadow: 'soft' }),
     ],
     text: ofText({
       kicker: { color: '#1A1300', decoStyle: { fill: GOLD, radius: 999, padX: 34, padY: 8, full: false, shadow: true } },
@@ -410,7 +410,7 @@ const offers: Template[] = [
     shape: { kind: 'band', color: YELLOW, color2: YELLOW, top: 0.62, skew: -9, scale: 1.05, opacity: 1 },
     decor: [
       decor({ kind: 'watermark', text: 'SALE', x: 40, y: 400, w: 1000, h: 300, color: RED, opacity: 0.16, size: 4, layer: 'back' }),
-      stk('b:tag', 70, 470, 340, 170, INK, WHITE, '{discount}', { layer: 'top', rotate: -6, shadow: 'soft' }),
+      stk('b:tag', 70, 470, 340, 170, INK, WHITE, '{discount}', { showIf: { key: 'discount', when: 'filled' }, layer: 'top', rotate: -6, shadow: 'soft' }),
     ],
     text: ofText({ kicker: { decoStyle: { fill: INK, radius: 999, padX: 34, padY: 8, full: false, shadow: true } }, cta: { decoStyle: { fill: RED, radius: 999, padX: 40, padY: 16, full: true, shadow: true } } }),
     contact: { theme: 'ink' },
@@ -420,7 +420,7 @@ const offers: Template[] = [
     shape: { kind: 'card', color: '#FFFFFF', color2: '#FFFFFF', top: -0.05, spread: 0.12, bottom: 50, radius: 60, opacity: 1 },
     productFx: { shadow: 'contact', shadowOpacity: 0.35 },
     productArea: { x: 140, y: 560, w: 800, h: 470 },
-    decor: [stk('b:ticket', 590, 600, 410, 180, RED, WHITE, '{discount}', { layer: 'top', rotate: 5, shadow: 'soft' }, 'كوبون\nخصم')],
+    decor: [stk('b:ticket', 590, 600, 410, 180, RED, WHITE, '{discount}', { showIf: { key: 'discount', when: 'filled' }, layer: 'top', rotate: 5, shadow: 'soft' }, 'كوبون\nخصم')],
     text: ofText({ oldPrice: { fx: 540, fy: 1052 }, price: { fy: 1114, size: 150 }, cta: { fy: 1150 } }),
     contact: { theme: 'white' },
   }),
@@ -429,7 +429,7 @@ const offers: Template[] = [
     shape: { kind: 'circle', color: '#FFFFFF', color2: '#FFEDE9', opacity: 0.92, scale: 0.9 },
     productFx: { shadow: 'float', shadowOpacity: 0.26 },
     productArea: OF_AREA,
-    decor: [decor({ kind: 'blobs', color: '#FF9A9F', color2: '#FFC9B8', opacity: 0.5, layer: 'back' }), stk('b:discount', 740, 470, 270, 270, RED, WHITE, '{discount}', { layer: 'top', rotate: 8, shadow: 'soft' }, 'خصم')],
+    decor: [decor({ kind: 'blobs', color: '#FF9A9F', color2: '#FFC9B8', opacity: 0.5, layer: 'back' }), stk('b:discount', 740, 470, 270, 270, RED, WHITE, '{discount}', { showIf: { key: 'discount', when: 'filled' }, layer: 'top', rotate: 8, shadow: 'soft' }, 'خصم')],
     text: ofText({ kicker: { decoStyle: { fill: INK, radius: 999, padX: 34, padY: 8, full: false, shadow: true } }, title: { color: '#A3111A' } }),
     contact: { theme: 'white' },
   }),
@@ -438,7 +438,7 @@ const offers: Template[] = [
     backdrop: { kind: 'split', color: '#F7F7F8', color2: RED },
     productFx: { shadow: 'soft', shadowOpacity: 0.4 },
     productArea: OF_AREA,
-    decor: [decor({ kind: 'rings', x: 560, y: 760, w: 640, h: 640, color: WHITE, opacity: 0.16, size: 5, layer: 'back' }), stk('b:ring', 70, 470, 250, 250, RED, WHITE, '{discount}', { layer: 'top', rotate: -8, shadow: 'soft' })],
+    decor: [decor({ kind: 'rings', x: 560, y: 760, w: 640, h: 640, color: WHITE, opacity: 0.16, size: 5, layer: 'back' }), stk('b:ring', 70, 470, 250, 250, RED, WHITE, '{discount}', { showIf: { key: 'discount', when: 'filled' }, layer: 'top', rotate: -8, shadow: 'soft' })],
     text: ofText({
       oldPrice: { color: '#FFD9DC' },
       price: { color: WHITE },

@@ -220,8 +220,19 @@ export function wrapParagraph(par: string, size: number, maxW: number, f: Measur
 export function fitLines(raw: string, st: TextStyle, innerW: number, version: number): FitResult {
   const f: MeasureFont = { weightAr: st.weightAr, weightLat: st.weightLat, tracking: st.tracking, uppercase: st.uppercase }
   let lines = raw.split('\n')
+  // الحجم الفعّال: قاعدة «أقصى عدد أسطر» تصغّر الخط تدريجياً حتى يتسع النص
+  let size = st.size
   if (st.wrap && (st.fit === 'none' || st.fit === 'kashida')) {
-    lines = lines.flatMap((p) => (p.trim() ? wrapParagraph(p, st.size, innerW, f, version, !!st.balance) : [p]))
+    const paras = lines
+    const build = (sz: number) => paras.flatMap((p) => (p.trim() ? wrapParagraph(p, sz, innerW, f, version, !!st.balance) : [p]))
+    lines = build(size)
+    if (st.maxLines && st.maxLines > 0) {
+      const min = Math.max(18, st.size * 0.5)
+      while (lines.length > st.maxLines && size > min) {
+        size = Math.max(min, size * 0.94)
+        lines = build(size)
+      }
+    }
   }
   const widths = lines.map((l) => measure100(stripMarks(l) || ' ', f, version))
   const clamp = (s: number) => Math.max(8, Math.min(st.maxSize, s))
@@ -235,14 +246,14 @@ export function fitLines(raw: string, st: TextStyle, innerW: number, version: nu
       return { lines, sizes: widths.map((w) => clamp((100 * innerW) / Math.max(w, 1))) }
     case 'kashida': {
       const max = Math.max(...widths, 1)
-      const s = Math.min(st.size, (100 * innerW) / max)
+      const s = Math.min(size, (100 * innerW) / max)
       const last = lines.length - 1
       return { lines: lines.map((l, i) => (st.wrap && i === last ? l : kashidaFit(l, innerW, s, f, version))), sizes: lines.map(() => s) }
     }
     default: {
       // حجم ثابت — مع تصغير تلقائي إذا تجاوز النص العرض المتاح
       const max = Math.max(...widths, 1)
-      const s = Math.min(st.size, (100 * innerW) / max)
+      const s = Math.min(size, (100 * innerW) / max)
       return { lines, sizes: lines.map(() => s) }
     }
   }

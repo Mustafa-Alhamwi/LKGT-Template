@@ -9,7 +9,7 @@ import { assetInfoSync } from './assets'
 import { cutoutSync } from './cutout'
 import { productRectOf, sceneRect } from '../poster/geometry'
 import { translateSel } from '../editor/moves'
-import { showWhenOk } from '../model/showWhen'
+import { showIfOk, showWhenOk } from '../model/showWhen'
 
 /* ------------------------------------------------------------------
  * فحص جودة التصميم قبل النشر: محتوى، وضوح، تباين، هوامش، تداخل، دقة، لغة
@@ -51,7 +51,7 @@ export async function runCheck(): Promise<Issue[]> {
   /* ---------- المحتوى ---------- */
   for (const k of TEXT_KEYS) {
     const st = d.style.text.items[k]
-    if (!st.visible || !showWhenOk(st.showWhen, answer)) continue
+    if (!st.visible || !showWhenOk(st.showWhen, answer) || !showIfOk(st.showIf, texts)) continue
     const v = valueOf(k).trim()
     if (!v) continue
     const ph = k === 'features' ? cat.placeholders.features.join('\n') : cat.placeholders[k]
@@ -132,7 +132,7 @@ export async function runCheck(): Promise<Issue[]> {
     if (blockBox) boxes.push({ sel: { kind: 'textBlock' }, label: 'كتلة النصوص', box: blockBox, kind: 'block', eid: 'block' })
     for (const k of TEXT_KEYS) {
       const st = d.style.text.items[k]
-      if (st.free && st.visible && showWhenOk(st.showWhen, answer) && valueOf(k).trim()) {
+      if (st.free && st.visible && showWhenOk(st.showWhen, answer) && showIfOk(st.showIf, texts) && valueOf(k).trim()) {
         const b = bridge.boxOf(`text:${k}`)
         if (b) boxes.push({ sel: { kind: 'text', key: k }, label: cat.labels[k], box: b, kind: 'free', eid: `text:${k}` })
       }
@@ -291,7 +291,7 @@ export async function runCheck(): Promise<Issue[]> {
       }
       for (const kx of TEXT_KEYS) {
         const st = d.style.text.items[kx]
-        if (!st.visible || !valueOf(kx).trim() || st.gradient || st.fillImage || !showWhenOk(st.showWhen, answer)) continue
+        if (!st.visible || !valueOf(kx).trim() || st.gradient || st.fillImage || !showWhenOk(st.showWhen, answer) || !showIfOk(st.showIf, texts)) continue
         const b = bridge.boxOf(st.free ? `text:${kx}` : `text:${kx}`)
         if (!b) continue
         const boxed = ['pill', 'box', 'outlineBox', 'tab'].includes(st.deco) && st.decoStyle.fill && st.decoStyle.fill !== 'transparent' && !st.decoStyle.fill.includes('rgba')

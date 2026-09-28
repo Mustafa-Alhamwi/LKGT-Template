@@ -26,6 +26,7 @@ import { normalizeImage, putAsset } from '../../lib/assets'
 import { pickFile } from '../../lib/importer'
 import type { BlendMode, ShowWhen } from '../../model/types'
 import { SHOW_WHEN_LABELS } from '../../model/showWhen'
+import { ShowIfControl } from './showIf'
 import { AR_WEIGHTS, LAT_WEIGHTS } from '../../lib/fonts'
 import { categoryDef } from '../../model/categories'
 import type { Decoration, FitMode, Selection, TextPanel, TextStyle } from '../../model/types'
@@ -168,6 +169,7 @@ export function TextControls({ sel }: { sel: Extract<Selection, { kind: 'text' |
               <>
                 <Switch label="التفاف تلقائي للكلمات" checked={!!st.wrap} onChange={(v) => set((x) => void (x.wrap = v), 'wrap')} />
                 {st.wrap && <Switch label="توازن طول الأسطر" checked={!!st.balance} onChange={(v) => set((x) => void (x.balance = v), 'bal')} />}
+                {st.wrap && <Slider label="أقصى عدد أسطر (0 = بلا حد) — يصغّر الخط تلقائياً" value={st.maxLines ?? 0} min={0} max={8} onChange={(v) => set((x) => void (x.maxLines = v || undefined), 'ml')} />}
               </>
             )}
             <Switch label="أحرف كبيرة (EN)" checked={st.uppercase} onChange={(v) => set((x) => void (x.uppercase = v), 'up')} />
@@ -313,6 +315,9 @@ export function TextControls({ sel }: { sel: Extract<Selection, { kind: 'text' |
               <Select<ShowWhen> value={st.showWhen ?? 'always'} options={SHOW_WHEN_LABELS.map((o) => ({ value: o.value, label: o.value === 'a' ? `عندما الإجابة «${cat.answers!.a}»` : o.value === 'b' ? `عندما الإجابة «${cat.answers!.b}»` : o.label }))} onChange={(v) => set((x) => void (x.showWhen = v), 'sw')} />
             </Group>
           )}
+          <Group title="قاعدة ذكية" hint="مثلاً: أخفِ هذا العنصر تلقائياً إذا لم تكتب سعراً.">
+            <ShowIfControl rule={st.showIf} cat={cat} onChange={(r) => set((x) => void (x.showIf = r), 'si')} />
+          </Group>
           <Group title="المحاذاة">
             <Chips<'inherit' | 'right' | 'center' | 'left'>
               value={st.align ?? 'inherit'}

@@ -118,7 +118,7 @@ const DEFAULT_PREFS: Prefs = {
   aiKey: '',
   aiModel: 'claude-haiku-4-5',
   nameTemplate: 'LKGT - {title} - {template}',
-  sizesToExport: ['post', 'story', 'square'],
+  sizesToExport: ['current'],
   shortcuts: {},
   brandLock: { on: false, pin: '' },
   homeFormat: 'post',

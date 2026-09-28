@@ -215,6 +215,9 @@ export interface TextStyle {
   blend?: BlendMode
   locked?: boolean
   showWhen?: ShowWhen
+  showIf?: ShowIf
+  /** قاعدة ذكية: أقصى عدد أسطر — يصغّر الخط تلقائياً عند التجاوز (مع الالتفاف) */
+  maxLines?: number
 }
 
 export interface TextPanel {
@@ -379,6 +382,12 @@ export type DecorKind =
   | 'qr'
   | 'image'
 
+/** قاعدة ذكية: يظهر العنصر فقط إن كان حقل نصي معيّن معبّأً (أو فارغاً) */
+export interface ShowIf {
+  key: TextKey
+  when: 'filled' | 'empty'
+}
+
 /** متى يظهر العنصر بالنسبة لإجابة التصميم (صح/خطأ…): دائماً، في السؤال فقط، عند كشف أي إجابة، أو عند إجابة محددة */
 export type ShowWhen = 'always' | 'question' | 'reveal' | 'a' | 'b'
 
@@ -459,6 +468,7 @@ export interface DecorItem {
   /** عنصر أضافه المستخدم ويبقى عند تبديل القالب */
   carry?: boolean
   showWhen?: ShowWhen
+  showIf?: ShowIf
   sticker?: StickerSpec
   qr?: QrSpec
   image?: ImageSpec
