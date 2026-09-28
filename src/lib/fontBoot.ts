@@ -10,9 +10,10 @@ export async function reloadFonts(force = true) {
 
 export function bootFonts() {
   reloadFonts(false).then((st) => {
+    const ui = Object.values(st.ui).some((v) => v !== 'missing')
     const ar = Object.values(st.ar).some((v) => v !== 'missing')
     const lat = Object.values(st.lat).some((v) => v !== 'missing')
-    const missing = [!ar && 'Araboto', !lat && 'HP Simplified'].filter(Boolean).join(' و ')
+    const missing = [!ui && 'Qomra', !ar && 'Araboto', !lat && 'HP Simplified'].filter(Boolean).join(' و ')
     if (missing) toast(`لم يُعثر على خط: ${missing} — افتح الإعدادات ← الخطوط لاستيراده من جهازك`, 'error', 9000)
   })
   let t: ReturnType<typeof setTimeout> | undefined

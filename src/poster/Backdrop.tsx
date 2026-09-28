@@ -53,6 +53,35 @@ export function backdropCss(b: BackdropStyle): React.CSSProperties {
       }
     case 'split':
       return { background: `linear-gradient(168deg, ${color} 0 54%, ${color2} 54% 100%)` }
+    case 'aurora':
+      return {
+        background: [
+          `radial-gradient(46% 34% at 10% 6%, ${withAlpha(color2, 0.55)} 0%, transparent 70%)`,
+          `radial-gradient(48% 38% at 96% 26%, ${withAlpha(mix(color2, '#FFC58A', 0.5), 0.5)} 0%, transparent 72%)`,
+          `radial-gradient(70% 45% at 24% 100%, ${withAlpha(color2, 0.4)} 0%, transparent 72%)`,
+          `radial-gradient(60% 40% at 90% 92%, ${withAlpha(mix(color2, '#FFFFFF', 0.4), 0.55)} 0%, transparent 70%)`,
+          color,
+        ].join(', '),
+      }
+    case 'peach':
+    case 'linear':
+      return { background: `linear-gradient(${b.angle ?? 170}deg, ${color} 0%, ${color2} 100%)` }
+    case 'mist':
+      return {
+        background: `radial-gradient(95% 55% at 50% 26%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 72%), linear-gradient(${b.angle ?? 180}deg, ${color} 0%, ${color2} 100%)`,
+      }
+    case 'grid':
+      return {
+        backgroundColor: color,
+        backgroundImage: `linear-gradient(${withAlpha(color2, 0.55)} 1px, transparent 1px), linear-gradient(90deg, ${withAlpha(color2, 0.55)} 1px, transparent 1px)`,
+        backgroundSize: '54px 54px',
+      }
+    case 'dots':
+      return {
+        backgroundColor: color,
+        backgroundImage: `radial-gradient(${color2} 2.4px, transparent 3px)`,
+        backgroundSize: '34px 34px',
+      }
     case 'paper':
       return {
         backgroundColor: color,

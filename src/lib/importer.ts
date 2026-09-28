@@ -36,8 +36,6 @@ export async function importImage(file: Blob, as: 'auto' | 'scene' | 'product' =
     const asProduct = as === 'product' || (as === 'auto' && n.hasAlpha)
     if (asProduct) {
       changeContent((c) => {
-        // المشهد التجريبي لا يناسب منتجاً جديداً — نبقي خلفية القالب فقط
-        if (c.scene?.assetId.startsWith('demo:')) c.scene = null
         c.product = newProduct(asset.id, null, false)
       })
       setTask(null)

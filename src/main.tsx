@@ -22,7 +22,7 @@ createRoot(document.getElementById('root')!).render(
 
 // أدوات تطوير (للاختبار الآلي فقط)
 if (import.meta.env.DEV) {
-  Promise.all([import('./store/editor'), import('./lib/exporter'), import('./model/templates')]).then(([store, exp, tpl]) => {
-    ;(window as unknown as Record<string, unknown>).__lk = { ...store, ...exp, templates: tpl.BUILTIN_TEMPLATES }
+  Promise.all([import('./store/editor'), import('./lib/exporter'), import('./model/templates'), import('./lib/importer')]).then(([store, exp, tpl, imp]) => {
+    ;(window as unknown as Record<string, unknown>).__lk = { ...store, ...exp, ...imp, templates: tpl.BUILTIN_TEMPLATES }
   })
 }

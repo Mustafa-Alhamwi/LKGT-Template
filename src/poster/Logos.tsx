@@ -15,9 +15,10 @@ interface Props {
   lkgt: LogoVariant
   partnerVariant: PartnerVariant
   partner: PartnerLogo | undefined
+  ghost?: boolean
 }
 
-export function Logos({ brand, lkgt, partnerVariant, partner }: Props) {
+export function Logos({ brand, lkgt, partnerVariant, partner, ghost }: Props) {
   const edit = useEdit()
   const custom = useAsset(brand.customLogoAssetId)
   const partnerAsset = useAsset(partner && !partner.builtIn ? partner.src : null)
@@ -78,8 +79,8 @@ export function Logos({ brand, lkgt, partnerVariant, partner }: Props) {
             draggable={false}
             style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: PARTNER_FILTER[partnerVariant] }}
           />
-        ) : edit ? (
-          <div className="lk-ghost">لوغو الشركة الشريكة</div>
+        ) : ghost ? (
+          <div className="lk-ghost">لوغو الشريك</div>
         ) : null}
         {edit && isSel(edit.selection, { kind: 'partner' }) && <div className="lk-sel" style={{ inset: -6 }} data-label="لوغو الشريك" />}
       </div>

@@ -18,6 +18,25 @@ import type { ArWeight, LatWeight } from '../model/types'
 export const AR_FAMILY = 'LK Ar'
 export const latFamily = (w: LatWeight) => `LK Lat ${w}`
 export const FALLBACK = '"Tajawal", "Segoe UI", system-ui, sans-serif'
+/** خط واجهة البرنامج نفسها (وليس التصاميم) */
+export const UI_FAMILY = 'LK UI'
+
+export const UI_WEIGHTS: { w: number; label: string; ar: string }[] = [
+  { w: 100, label: 'Thin', ar: 'رفيع جداً' },
+  { w: 300, label: 'Light', ar: 'خفيف' },
+  { w: 400, label: 'Regular', ar: 'عادي' },
+  { w: 500, label: 'Medium', ar: 'متوسط' },
+  { w: 700, label: 'Bold', ar: 'عريض' },
+  { w: 900, label: 'Black', ar: 'أسود' },
+]
+
+function qomraNames(label: string): string[] {
+  const alt = label === 'Regular' ? ['Normal', 'Book', 'Roman'] : label === 'Black' ? ['Heavy', 'ExtraBold', 'Extra Bold'] : label === 'Thin' ? ['Hairline', 'ExtraLight', 'Extra Light'] : label === 'Bold' ? ['SemiBold', 'Semi Bold'] : []
+  const out: string[] = []
+  for (const l of [label, ...alt]) out.push(`Qomra ${l}`, `Qomra-${l}`, `Qomra${l}`, `Qomra ${l} Regular`, `Qomra-${l}Regular`, `Qomra_${l}`)
+  if (label === 'Regular') out.push('Qomra', 'Qomra Regular', 'Qomra-Regular', 'Qomra Normal')
+  return out
+}
 
 export const AR_WEIGHTS: { w: ArWeight; label: string; ar: string }[] = [
   { w: 100, label: 'Thin', ar: 'رفيع جداً' },
@@ -63,6 +82,7 @@ const HP_NAMES: Record<LatWeight, string[]> = {
 export type FaceOrigin = 'file' | 'local' | 'missing'
 
 export interface FontStatus {
+  ui: Record<number, FaceOrigin>
   ar: Record<number, FaceOrigin>
   lat: Record<number, FaceOrigin>
   ready: boolean
@@ -72,7 +92,7 @@ export interface FontStatus {
 
 interface StoredFont {
   id: string
-  script: 'ar' | 'lat'
+  script: 'ar' | 'lat' | 'ui'
   weight: number
   name: string
   buffer: ArrayBuffer
@@ -91,12 +111,13 @@ type Source = { kind: 'buffer'; buffer: ArrayBuffer; name: string } | { kind: 'l
 
 let arSources: Record<number, Source> = {}
 let latSources: Record<number, Source> = {}
+let uiSources: Record<number, Source> = {}
 let blobUrls: string[] = []
 let exportCssCache: string | null = null
 
 function classify(info: { family: string; fullName: string; subfamily: string; postscriptName: string; weightClass: number }, fileName = '') {
   const hay = `${info.family} ${info.fullName} ${info.postscriptName} ${fileName}`
-  const script: 'ar' | 'lat' | null = /araboto/i.test(hay) ? 'ar' : /hp\s*_?simplified/i.test(hay) ? 'lat' : null
+  const script: 'ar' | 'lat' | 'ui' | null = /araboto/i.test(hay) ? 'ar' : /hp\s*_?simplified/i.test(hay) ? 'lat' : /qomra/i.test(hay) ? 'ui' : null
   const weight = weightFromName(`${info.fullName} ${info.subfamily} ${info.postscriptName} ${fileName}`, info.weightClass || 400)
   return { script, weight }
 }
@@ -177,6 +198,9 @@ function buildCss(forExport: boolean): string {
       `@font-face{font-family:"${AR_FAMILY}";src:${srcFor(s, forExport)};font-weight:${w};font-style:normal;font-display:block;unicode-range:${AR_RANGE};}`,
     )
   }
+  for (const [w, src] of Object.entries(uiSources)) {
+    rules.push(`@font-face{font-family:"${UI_FAMILY}";src:${srcFor(src, forExport)};font-weight:${w};font-style:normal;font-display:block;}`)
+  }
   const latAvail = Object.keys(latSources).map(Number) as LatWeight[]
   for (const lw of LAT_WEIGHTS) {
     const pick = nearest(lw.w, latAvail)
@@ -198,15 +222,30 @@ export function initFonts(force = false): Promise<FontStatus> {
     exportCssCache = null
     arSources = {}
     latSources = {}
-    const status: FontStatus = { ar: {}, lat: {}, ready: false, detail: {} }
+    uiSources = {}
+    const status: FontStatus = { ui: {}, ar: {}, lat: {}, ready: false, detail: {} }
 
     const files = [...(await loadBundled()), ...(await loadStored())]
     for (const f of files) {
-      const target = f.script === 'ar' ? arSources : latSources
+      const target = f.script === 'ar' ? arSources : f.script === 'ui' ? uiSources : latSources
       target[f.weight] = { kind: 'buffer', buffer: f.buffer, name: f.name }
     }
 
     await Promise.all([
+      ...UI_WEIGHTS.map(async ({ w, label }) => {
+        if (uiSources[w]) {
+          status.ui[w] = 'file'
+          status.detail[`ui${w}`] = (uiSources[w] as { name: string }).name
+          return
+        }
+        const names = qomraNames(label)
+        const hit = await probeLocal(names)
+        if (hit) {
+          uiSources[w] = { kind: 'local', names: [hit, ...names.filter((n) => n !== hit)], matched: hit }
+          status.ui[w] = 'local'
+          status.detail[`ui${w}`] = hit
+        } else status.ui[w] = 'missing'
+      }),
       ...AR_WEIGHTS.map(async ({ w, label }) => {
         if (arSources[w]) {
           status.ar[w] = 'file'

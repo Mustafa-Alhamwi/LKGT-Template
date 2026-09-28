@@ -1,4 +1,4 @@
-import { allPartners, allTemplates, findTemplate, setTask, toast, useEditor } from '../store/editor'
+import { allPartners, allTemplates, findTemplate, setTask, templateStyle, toast, useEditor } from '../store/editor'
 import { downloadBlob, exportFileName, renderDesign } from './exporter'
 
 /* أوامر عامة (تصدير...) */
@@ -32,7 +32,7 @@ export async function exportAllTemplates() {
     for (let i = 0; i < list.length; i++) {
       const t = list[i]
       setTask({ label: `تصدير ${i + 1} من ${list.length}: ${t.name}`, progress: i / list.length })
-      const design = { ...s.design, templateId: t.id, style: t.style }
+      const design = { ...s.design, templateId: t.id, style: templateStyle(s, t) }
       const blob = await renderDesign(design, s.brand, allPartners(s), s.fontsVersion, {
         scale: s.exportScale,
         format: s.exportFormat,

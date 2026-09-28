@@ -36,7 +36,7 @@ function getWorker() {
 }
 
 export function cutoutKey(p: ProductContent): string {
-  return JSON.stringify([p.sourceAssetId, p.maskAssetId, p.paintAssetId, p.cleanup])
+  return JSON.stringify([p.sourceAssetId, p.maskAssetId, p.paintAssetId, p.cleanup, !!p.emptyBase])
 }
 
 async function compute(p: ProductContent): Promise<Cutout | null> {
@@ -47,7 +47,7 @@ async function compute(p: ProductContent): Promise<Cutout | null> {
   ])
   if (!source) return null
   const id = ++seq
-  const req: CutoutRequest = { id, source, mask, paint, cleanup: p.cleanup }
+  const req: CutoutRequest = { id, source, mask, paint, cleanup: p.cleanup, emptyBase: p.emptyBase }
   const res = await new Promise<CutoutResponse>((resolve) => {
     waiting.set(id, resolve)
     getWorker().postMessage(req)

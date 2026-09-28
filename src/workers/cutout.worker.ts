@@ -17,7 +17,10 @@ export interface CutoutRequest {
     fillHoles: boolean
     choke: number
     feather: number
+    smooth?: number
+    decontaminate?: boolean
   }
+  emptyBase?: boolean
 }
 
 export interface CutoutResponse {
@@ -188,13 +191,48 @@ function boxBlur(a: Uint8ClampedArray, w: number, h: number, r: number) {
   }
 }
 
+/** إزالة هالة لون الخلفية: ألوان الحواف تُستبدل بألوان الداخل القريب المعتم */
+function decontaminate(rgba: Uint8ClampedArray, alpha: Uint8ClampedArray, w: number, h: number) {
+  const n = w * h
+  const R = new Uint8ClampedArray(n)
+  const G = new Uint8ClampedArray(n)
+  const B = new Uint8ClampedArray(n)
+  const W = new Uint8ClampedArray(n)
+  for (let i = 0; i < n; i++) {
+    const solid = alpha[i] >= 245
+    W[i] = solid ? 255 : 0
+    if (solid) {
+      R[i] = rgba[i * 4]
+      G[i] = rgba[i * 4 + 1]
+      B[i] = rgba[i * 4 + 2]
+    }
+  }
+  const r = 3
+  boxBlur(R, w, h, r)
+  boxBlur(G, w, h, r)
+  boxBlur(B, w, h, r)
+  boxBlur(W, w, h, r)
+  for (let i = 0; i < n; i++) {
+    const a = alpha[i]
+    if (a >= 245 || a === 0 || W[i] < 8) continue
+    const k = 255 / W[i]
+    const t = 1 - a / 255 // كلما كان أشفّ اعتمدنا لون الداخل أكثر
+    const m = Math.min(1, 0.55 + t)
+    rgba[i * 4] = rgba[i * 4] * (1 - m) + Math.min(255, R[i] * k) * m
+    rgba[i * 4 + 1] = rgba[i * 4 + 1] * (1 - m) + Math.min(255, G[i] * k) * m
+    rgba[i * 4 + 2] = rgba[i * 4 + 2] * (1 - m) + Math.min(255, B[i] * k) * m
+  }
+}
+
 async function process(req: CutoutRequest): Promise<CutoutResponse> {
   const src = await readPixels(req.source)
   const { w, h } = src
   const n = w * h
   const alpha = new Uint8ClampedArray(n)
   let hasMask = false
-  if (req.mask) {
+  if (req.emptyBase) {
+    hasMask = true // قناع فارغ: لا شيء ظاهر إلا ما تضيفه الفرشاة/التحديد
+  } else if (req.mask) {
     const m = await readPixels(req.mask, w, h)
     let useAlpha = false
     for (let i = 3; i < m.data.length; i += 4 * 97) {
@@ -214,6 +252,15 @@ async function process(req: CutoutRequest): Promise<CutoutResponse> {
   if (c.islands) keepMain(alpha, w, h)
   if (c.fillHoles) fillHoles(alpha, w, h)
   if (c.choke > 0) erode(alpha, w, h, Math.round(c.choke))
+  if ((c.smooth ?? 0) > 0) {
+    // تنعيم الشكل: تمويه ثم شحذ المنحنى فتصبح الحواف ملساء بلا تسنن
+    boxBlur(alpha, w, h, Math.max(1, Math.round(c.smooth!)))
+    boxBlur(alpha, w, h, Math.max(1, Math.round(c.smooth!)))
+    for (let i = 0; i < alpha.length; i++) {
+      const v = (alpha[i] - 128) * 2.6 + 128
+      alpha[i] = v < 0 ? 0 : v > 255 ? 255 : v
+    }
+  }
   if (c.feather > 0) boxBlur(alpha, w, h, Math.max(1, Math.round(c.feather)))
 
   if (req.paint) {
@@ -226,6 +273,8 @@ async function process(req: CutoutRequest): Promise<CutoutResponse> {
       alpha[i] = v
     }
   }
+
+  if (c.decontaminate) decontaminate(src.data, alpha, w, h)
 
   // الحدود
   let minX = w,

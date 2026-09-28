@@ -1,6 +1,5 @@
 import { createStore, del, get, set, keys } from 'idb-keyval'
 import { useEffect, useState } from 'react'
-import { DEMO_ASSETS } from '../model/demo'
 
 /* ------------------------------------------------------------------
  * مخزن الصور (IndexedDB) — الصور تبقى محفوظة بعد إعادة فتح البرنامج
@@ -36,8 +35,6 @@ function notify() {
 
 export function assetInfoSync(id: string | null | undefined): AssetInfo | undefined {
   if (!id) return undefined
-  const d = DEMO_ASSETS[id]
-  if (d) return { url: resolvePublic(d.url), w: d.w, h: d.h }
   return cache.get(id)
 }
 
@@ -60,8 +57,6 @@ export function loadAsset(id: string): Promise<AssetInfo | null> {
 }
 
 export async function getAssetBlob(id: string): Promise<Blob | null> {
-  const d = DEMO_ASSETS[id]
-  if (d) return (await fetch(resolvePublic(d.url))).blob()
   const rec = (await get(id, store)) as StoredAsset | undefined
   return rec?.blob ?? null
 }
@@ -88,7 +83,6 @@ export async function putAsset(blob: Blob, name = 'image', knownSize?: { w: numb
 }
 
 export async function deleteAsset(id: string) {
-  if (id.startsWith('demo:')) return
   await del(id, store)
   const c = cache.get(id)
   if (c) URL.revokeObjectURL(c.url)

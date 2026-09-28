@@ -1,8 +1,9 @@
 import { useLayoutEffect, useRef } from 'react'
-import type { AdTexts, TextBlockStyle, TextKey, TextStyle } from '../model/types'
+import type { AdTexts, ExtraText, Selection, TextBlockStyle, TextKey, TextStyle } from '../model/types'
 import { isSel, useEdit } from './EditContext'
 import { fitLines, parseRich } from '../lib/textFit'
 import { fontStack, isArabicText } from '../lib/fonts'
+import { withAlpha } from '../lib/color'
 
 /* ------------------------------------------------------------------
  * كتلة النصوص: اسم المنتج (إنكليزي) + الوصف + الجملة العربية...
@@ -37,6 +38,34 @@ function textValue(texts: AdTexts, k: TextKey): string {
   return texts[k] ?? ''
 }
 
+function effectStyle(st: TextStyle): React.CSSProperties {
+  const o: React.CSSProperties = {}
+  if (st.gradient) {
+    o.backgroundImage = `linear-gradient(${st.gradAngle ?? 90}deg, ${st.color}, ${st.color2 ?? st.color})`
+    o.WebkitBackgroundClip = 'text'
+    o.backgroundClip = 'text'
+    o.color = 'transparent'
+    o.WebkitTextFillColor = 'transparent'
+  }
+  if ((st.strokeW ?? 0) > 0) {
+    o.WebkitTextStroke = `${st.strokeW}px ${st.strokeColor ?? '#fff'}`
+    o.paintOrder = 'stroke fill'
+  }
+  const c = st.shadowColor ?? '#000'
+  switch (st.textShadow) {
+    case 'soft':
+      o.filter = `drop-shadow(0 6px 10px ${withAlpha(c, 0.4)})`
+      break
+    case 'glow':
+      o.filter = `drop-shadow(0 0 14px ${withAlpha(c, 0.9)})`
+      break
+    case 'hard':
+      o.filter = `drop-shadow(4px 5px 0 ${c})`
+      break
+  }
+  return o
+}
+
 function Lines({
   lines,
   sizes,
@@ -67,6 +96,7 @@ function Lines({
               color: st.color,
               whiteSpace: 'pre',
               textAlign: align,
+              ...effectStyle(st),
             }}
           >
             {line.trim() === '' ? ' ' : parseRich(line).map((s, j) => (s.accent ? <span key={j} style={{ color: st.accent }}>{s.text}</span> : <span key={j}>{s.text}</span>))}
@@ -144,30 +174,35 @@ function Editable({
 
 function decoBox(st: TextStyle): React.CSSProperties {
   const d = st.decoStyle
+  const sz = d.shadowSize ?? 1
+  const sc = d.shadowColor ?? '#000000'
+  const bg = d.fill2 ? `linear-gradient(${d.angle ?? 135}deg, ${d.fill}, ${d.fill2})` : d.fill
   const base: React.CSSProperties = {
     padding: `${d.padY}px ${d.padX + (st.deco === 'pill' && d.radius > 100 ? 6 : 0)}px`,
     borderRadius: d.radius,
-    boxShadow: d.shadow ? '0 14px 30px -10px rgba(0,0,0,0.45)' : undefined,
+    boxShadow: d.shadow ? `0 ${14 * sz}px ${30 * sz}px -${10 * sz}px ${withAlpha(sc, 0.5)}` : undefined,
   }
   switch (st.deco) {
     case 'pill':
     case 'box':
-      return { ...base, background: d.fill }
+      return { ...base, background: bg }
     case 'outlineBox':
-      return { ...base, background: d.fill, border: `${d.strokeWidth}px solid ${d.stroke}` }
-    case 'glass':
+      return { ...base, background: bg, border: `${d.strokeWidth}px solid ${d.stroke}` }
+    case 'glass': {
+      const blur = d.blur ?? 14
       return {
         ...base,
-        background: d.fill,
+        background: bg,
         border: `${Math.max(1, d.strokeWidth)}px solid ${d.stroke}`,
-        backdropFilter: 'blur(14px) saturate(1.2)',
-        WebkitBackdropFilter: 'blur(14px) saturate(1.2)',
+        backdropFilter: `blur(${blur}px) saturate(1.2)`,
+        WebkitBackdropFilter: `blur(${blur}px) saturate(1.2)`,
       }
+    }
     case 'tab':
       return {
         ...base,
         borderRadius: 0,
-        background: d.fill,
+        background: bg,
         clipPath: 'polygon(6% 0, 100% 0, 94% 100%, 0 100%)',
         padding: `${d.padY}px ${d.padX + 10}px`,
       }
@@ -176,7 +211,8 @@ function decoBox(st: TextStyle): React.CSSProperties {
 }
 
 interface ItemProps {
-  k: TextKey
+  id: string
+  sel: Selection
   st: TextStyle
   value: string
   innerW: number
@@ -184,12 +220,15 @@ interface ItemProps {
   first: boolean
   gap: number
   fontsVersion: number
+  features?: boolean
 }
 
-function TextItem({ k, st, value, innerW, align, first, gap, fontsVersion }: ItemProps) {
+const resolveAlign = (st: TextStyle, block: 'center' | 'right' | 'left') => (st.align && st.align !== 'inherit' ? st.align : block)
+
+function TextItem({ id, sel, st, value, innerW, align, first, gap, fontsVersion, features }: ItemProps) {
   const edit = useEdit()
-  const editing = edit?.editing === k
-  const selected = edit && isSel(edit.selection, { kind: 'text', key: k })
+  const editing = edit?.editing === id
+  const selected = edit && isSel(edit.selection, sel)
   const d = st.decoStyle
   const isBox = BOX_DECOS.has(st.deco)
   const full = isBox ? d.full : true
@@ -201,27 +240,19 @@ function TextItem({ k, st, value, innerW, align, first, gap, fontsVersion }: Ite
     ? {
         onPointerDown: (e: React.PointerEvent) => {
           if (editing) return
-          edit.startDrag({ kind: 'text', key: k }, e)
+          edit.startDrag(sel, e)
         },
         onDoubleClick: (e: React.MouseEvent) => {
           e.stopPropagation()
-          edit.startEdit(k)
+          edit.startEdit(id)
         },
       }
     : {}
 
   let content: React.ReactNode
   if (editing) {
-    content = (
-      <Editable
-        value={value}
-        st={st}
-        size={sizes[0] ?? st.size}
-        align={align}
-        onCommit={(v) => edit!.commitText(k, v)}
-      />
-    )
-  } else if (k === 'features') {
+    content = <Editable value={value} st={st} size={sizes[0] ?? st.size} align={align} onCommit={(v) => edit!.commitText(id, v)} />
+  } else if (features) {
     content = (
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, justifyContent: flexAlign, width: '100%' }} dir="rtl">
         {lines.map((line, i) => (
@@ -270,15 +301,12 @@ function TextItem({ k, st, value, innerW, align, first, gap, fontsVersion }: Ite
         const c = d.accent
         const t = Math.max(2, d.strokeWidth || 3)
         const L = 26
-        const g = (pos: string, w: number | string, h: number | string) => `linear-gradient(${c}, ${c}) ${pos} / ${w}${typeof w === 'number' ? 'px' : ''} ${h}${typeof h === 'number' ? 'px' : ''} no-repeat`
+        const g = (pos: string, w: number, h: number) => `linear-gradient(${c}, ${c}) ${pos} / ${w}px ${h}px no-repeat`
         content = (
           <div
             style={{
               padding: `${d.padY}px ${d.padX + 10}px`,
-              background: [
-                g('left top', L, t), g('left top', t, L), g('right top', L, t), g('right top', t, L),
-                g('left bottom', L, t), g('left bottom', t, L), g('right bottom', L, t), g('right bottom', t, L),
-              ].join(', '),
+              background: [g('left top', L, t), g('left top', t, L), g('right top', L, t), g('right top', t, L), g('left bottom', L, t), g('left bottom', t, L), g('right bottom', L, t), g('right bottom', t, L)].join(', '),
             }}
           >
             {body}
@@ -294,7 +322,7 @@ function TextItem({ k, st, value, innerW, align, first, gap, fontsVersion }: Ite
   return (
     <div
       className="lk-ti"
-      data-key={k}
+      data-key={id}
       {...handlers}
       style={{
         position: 'relative',
@@ -313,26 +341,60 @@ function TextItem({ k, st, value, innerW, align, first, gap, fontsVersion }: Ite
   )
 }
 
+/** عنصر نص حرّ (مفصول عن الكتلة أو نص إضافي): موضعه وعرضه ودورانه خاصة به */
+function FreeText({ id, sel, st, value, fontsVersion, features }: { id: string; sel: Selection; st: TextStyle; value: string; fontsVersion: number; features?: boolean }) {
+  const edit = useEdit()
+  const selected = edit && isSel(edit.selection, sel)
+  const align = resolveAlign(st, 'center')
+  return (
+    <div
+      className="lk-free"
+      dir="ltr"
+      style={{
+        position: 'absolute',
+        left: st.fx ?? 0,
+        top: st.fy ?? 0,
+        width: st.fw ?? 600,
+        display: 'flex',
+        flexDirection: 'column',
+        transform: st.rotate ? `rotate(${st.rotate}deg)` : undefined,
+        zIndex: 3,
+      }}
+    >
+      <TextItem id={id} sel={sel} st={st} value={value} innerW={st.fw ?? 600} align={align} first gap={0} fontsVersion={fontsVersion} features={features} />
+      {edit && selected && edit.editing !== id && (
+        <>
+          <div className="lk-handle lk-handle-l" onPointerDown={(e) => edit.startDrag(sel, e, { handle: 'left' })} />
+          <div className="lk-handle lk-handle-r" onPointerDown={(e) => edit.startDrag(sel, e, { handle: 'right' })} />
+        </>
+      )}
+    </div>
+  )
+}
+
 interface Props {
   tb: TextBlockStyle
   texts: AdTexts
+  extras: ExtraText[]
   fontsVersion: number
 }
 
-export function TextBlock({ tb, texts, fontsVersion }: Props) {
+export function TextBlock({ tb, texts, extras, fontsVersion }: Props) {
   const edit = useEdit()
-  const ref = useRef<HTMLDivElement>(null)
   const p = tb.panel
   const pad = p.kind !== 'none' ? p.pad : 0
   const innerW = tb.w - pad * 2
-  const keys = tb.order.filter((k) => {
+  const shown = (k: TextKey) => {
     const st = tb.items[k]
     if (!st?.visible) return false
     if (edit?.editing === k) return true
     return textValue(texts, k).trim() !== ''
-  })
+  }
+  const flow = tb.order.filter((k) => shown(k) && !tb.items[k].free)
+  const free = tb.order.filter((k) => shown(k) && tb.items[k].free)
   const selected = edit && isSel(edit.selection, { kind: 'textBlock' })
-  const anyTextSel = edit?.selection?.kind === 'text'
+  const selKey = edit?.selection?.kind === 'text' ? edit.selection.key : null
+  const anyFlowSel = selKey != null && flow.includes(selKey)
 
   const panelStyle: React.CSSProperties =
     p.kind === 'none'
@@ -344,49 +406,60 @@ export function TextBlock({ tb, texts, fontsVersion }: Props) {
           border: p.kind === 'solid' ? undefined : `2px solid ${p.stroke}`,
           backdropFilter: p.kind === 'glass' ? 'blur(18px) saturate(1.25)' : undefined,
           WebkitBackdropFilter: p.kind === 'glass' ? 'blur(18px) saturate(1.25)' : undefined,
-          boxShadow: p.kind === 'glass' ? '0 30px 60px -20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.18)' : undefined,
+          boxShadow: p.kind === 'glass' ? '0 30px 60px -20px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.4)' : undefined,
         }
 
-  if (!keys.length && !edit) return null
-
   return (
-    <div
-      ref={ref}
-      className="lk-textblock"
-      style={{
-        position: 'absolute',
-        left: tb.x,
-        top: tb.y,
-        width: tb.w,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: tb.align === 'center' ? 'center' : tb.align === 'right' ? 'flex-end' : 'flex-start',
-        boxSizing: 'border-box',
-        ...panelStyle,
-      }}
-      dir="ltr"
-      onPointerDown={edit ? (e) => edit.startDrag({ kind: 'textBlock' }, e) : undefined}
-    >
-      {keys.map((k, i) => (
-        <TextItem
-          key={k}
-          k={k}
-          st={tb.items[k]}
-          value={textValue(texts, k)}
-          innerW={innerW}
-          align={tb.align}
-          first={i === 0}
-          gap={tb.gap}
-          fontsVersion={fontsVersion}
-        />
-      ))}
-      {edit && (selected || anyTextSel) && (
-        <>
-          <div className="lk-sel lk-sel-block" style={{ inset: -14 }} data-label="كتلة النصوص" />
-          <div className="lk-handle lk-handle-l" onPointerDown={(e) => edit.startDrag({ kind: 'textBlock' }, e, { handle: 'left' })} />
-          <div className="lk-handle lk-handle-r" onPointerDown={(e) => edit.startDrag({ kind: 'textBlock' }, e, { handle: 'right' })} />
-        </>
+    <>
+      {(flow.length > 0 || edit) && (
+        <div
+          className="lk-textblock"
+          style={{
+            position: 'absolute',
+            left: tb.x,
+            top: tb.y,
+            width: tb.w,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: tb.align === 'center' ? 'center' : tb.align === 'right' ? 'flex-end' : 'flex-start',
+            boxSizing: 'border-box',
+            ...panelStyle,
+          }}
+          dir="ltr"
+          onPointerDown={edit ? (e) => edit.startDrag({ kind: 'textBlock' }, e) : undefined}
+        >
+          {flow.map((k, i) => (
+            <TextItem
+              key={k}
+              id={k}
+              sel={{ kind: 'text', key: k }}
+              st={tb.items[k]}
+              value={textValue(texts, k)}
+              innerW={innerW}
+              align={resolveAlign(tb.items[k], tb.align)}
+              first={i === 0}
+              gap={tb.gap}
+              fontsVersion={fontsVersion}
+              features={k === 'features'}
+            />
+          ))}
+          {edit && (selected || anyFlowSel) && flow.length > 0 && (
+            <>
+              <div className="lk-sel lk-sel-block" style={{ inset: -14 }} data-label="كتلة النصوص" />
+              <div className="lk-handle lk-handle-l" onPointerDown={(e) => edit.startDrag({ kind: 'textBlock' }, e, { handle: 'left' })} />
+              <div className="lk-handle lk-handle-r" onPointerDown={(e) => edit.startDrag({ kind: 'textBlock' }, e, { handle: 'right' })} />
+            </>
+          )}
+        </div>
       )}
-    </div>
+      {free.map((k) => (
+        <FreeText key={k} id={k} sel={{ kind: 'text', key: k }} st={tb.items[k]} value={textValue(texts, k)} fontsVersion={fontsVersion} features={k === 'features'} />
+      ))}
+      {extras
+        .filter((e) => e.style.visible !== false)
+        .map((e) => (
+          <FreeText key={e.id} id={e.id} sel={{ kind: 'extra', id: e.id }} st={e.style} value={e.text} fontsVersion={fontsVersion} />
+        ))}
+    </>
   )
 }

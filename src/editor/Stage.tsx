@@ -1,27 +1,14 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, Eraser, ImagePlus, Maximize2, RotateCcw, Sparkles } from 'lucide-react'
+import { ImagePlus, Maximize2, Minus, Plus } from 'lucide-react'
 import { Poster } from '../poster/Poster'
 import { EditCtx, type EditApi } from '../poster/EditContext'
-import {
-  allPartners,
-  allTemplates,
-  beginLive,
-  change,
-  changeContent,
-  emptyTemplate,
-  findTemplate,
-  live,
-  restoreDemo,
-  select,
-  setEditing,
-  stepTemplate,
-  useEditor,
-} from '../store/editor'
-import type { Design, Selection, TextKey } from '../model/types'
+import { allPartners, beginLive, changeContent, live, select, setEditing, useEditor } from '../store/editor'
+import { bridge } from '../lib/bridge'
+import type { Design, Selection } from '../model/types'
 import { POSTER_H, POSTER_W } from '../model/types'
 import { assetInfoSync } from '../lib/assets'
 import { cutoutSync } from '../lib/cutout'
-import { autoPlacement, productSourceRect, sceneRect } from '../poster/geometry'
+import { autoPlacement, productRectOf } from '../poster/geometry'
 import { importImage, pickFile } from '../lib/importer'
 
 /* ------------------------------------------------------------------
@@ -29,14 +16,7 @@ import { importImage, pickFile } from '../lib/importer'
  * سحب العناصر، التحرير المباشر للنصوص، إسقاط الصور
  * ------------------------------------------------------------------ */
 
-function productRectNow(d: Design) {
-  const p = d.content.product
-  if (!p) return null
-  const cut = cutoutSync(p)
-  if (!cut) return null
-  const s = sceneRect(d.content.scene, assetInfoSync(d.content.scene?.assetId))
-  return productSourceRect(p, s, cut, d.style)
-}
+const productRectNow = productRectOf
 
 function applyDrag(d: Design, d0: Design, sel: Selection, dx: number, dy: number, handle?: string) {
   switch (sel.kind) {
@@ -47,7 +27,6 @@ function applyDrag(d: Design, d0: Design, sel: Selection, dx: number, dy: number
       if (!info) return
       const base = sc0.place ?? autoPlacement(info.w, info.h)
       d.content.scene!.place = { x: base.x + dx, y: base.y + dy, w: base.w }
-      d.isDemo = false
       return
     }
     case 'product': {
@@ -55,10 +34,29 @@ function applyDrag(d: Design, d0: Design, sel: Selection, dx: number, dy: number
       if (!r || !d.content.product) return
       d.content.product.linked = false
       d.content.product.place = { x: r.x + dx, y: r.y + dy, w: r.w }
-      d.isDemo = false
       return
     }
     case 'text':
+    case 'extra': {
+      const st0 = sel.kind === 'text' ? d0.style.text.items[sel.key] : d0.content.extras?.find((e) => e.id === sel.id)?.style
+      const st = sel.kind === 'text' ? d.style.text.items[sel.key] : d.content.extras?.find((e) => e.id === sel.id)?.style
+      if (!st0 || !st) return
+      if (sel.kind === 'text' && !st0.free) return applyDrag(d, d0, { kind: 'textBlock' }, dx, dy, handle)
+      const w0 = st0.fw ?? 600
+      const x0 = st0.fx ?? 0
+      if (handle === 'right') st.fw = Math.max(80, Math.round(w0 + dx))
+      else if (handle === 'left') {
+        const w = Math.max(80, w0 - dx)
+        st.fx = Math.round(x0 + (w0 - w))
+        st.fw = Math.round(w)
+      } else {
+        let x = x0 + dx
+        if (Math.abs(x + w0 / 2 - POSTER_W / 2) < 10) x = POSTER_W / 2 - w0 / 2
+        st.fx = Math.round(x)
+        st.fy = Math.round((st0.fy ?? 0) + dy)
+      }
+      return
+    }
     case 'textBlock': {
       const t0 = d0.style.text
       const t = d.style.text
@@ -70,7 +68,6 @@ function applyDrag(d: Design, d0: Design, sel: Selection, dx: number, dy: number
         t.w = w
       } else {
         let x = t0.x + dx
-        // مغناطيس على منتصف البوستر
         const center = x + t0.w / 2
         if (Math.abs(center - POSTER_W / 2) < 10) x = POSTER_W / 2 - t0.w / 2
         t.x = Math.round(x)
@@ -100,9 +97,9 @@ export function Stage() {
   const selection = useEditor((s) => s.selection)
   const editing = useEditor((s) => s.editing)
   const fontsVersion = useEditor((s) => s.fontsVersion)
-  const userTemplates = useEditor((s) => s.userTemplates)
   const partners = useMemo(() => allPartners({ userPartners }), [userPartners])
   const wrapRef = useRef<HTMLDivElement>(null)
+  const posterRef = useRef<HTMLDivElement>(null)
   const [box, setBox] = useState({ w: 800, h: 900 })
   const [zoom, setZoom] = useState<'fit' | number>('fit')
   const [dragOver, setDragOver] = useState(false)
@@ -115,8 +112,16 @@ export function Stage() {
     return () => ro.disconnect()
   }, [])
 
-  const fit = Math.max(0.1, Math.min((box.w - 48) / POSTER_W, (box.h - 40) / POSTER_H))
+  const fit = Math.max(0.1, Math.min((box.w - 56) / POSTER_W, (box.h - 44) / POSTER_H))
   const scale = zoom === 'fit' ? fit : zoom
+
+  useEffect(() => {
+    bridge.poster = posterRef.current
+    bridge.scale = scale
+    return () => {
+      bridge.poster = null
+    }
+  }, [scale])
 
   const startDrag = useCallback<EditApi['startDrag']>(
     (sel, e, extra) => {
@@ -165,12 +170,15 @@ export function Stage() {
       editing,
       select,
       startDrag,
-      startEdit: (key: TextKey) => setEditing(key),
+      startEdit: (id: string) => setEditing(id),
       stopEdit: () => setEditing(null),
-      commitText: (key, value) => {
+      commitText: (id, value) => {
         changeContent((c) => {
-          if (key === 'features') c.texts.features = value.split('\n').map((s) => s.trim()).filter(Boolean)
-          else c.texts[key] = value
+          if (id.startsWith('x_')) {
+            const ex = c.extras?.find((e) => e.id === id)
+            if (ex) ex.text = value
+          } else if (id === 'features') c.texts.features = value.split('\n').map((s) => s.trim()).filter(Boolean)
+          else c.texts[id as 'title'] = value
         })
         setEditing(null)
       },
@@ -210,7 +218,6 @@ export function Stage() {
           const cy = p.y + h / 2
           const w = Math.max(200, p.w * k)
           d.content.scene.place = { x: cx - w / 2, y: cy - (w * info.h) / info.w / 2, w }
-          d.isDemo = false
         }
         if (sel.kind === 'product' && d.content.product) {
           const r = productRectNow(d)
@@ -223,7 +230,6 @@ export function Stage() {
           const s2 = w / cut.srcW
           d.content.product.linked = false
           d.content.product.place = { x: bx - (cut.crop.x + cut.crop.w / 2) * s2, y: by - (cut.crop.y + cut.crop.h) * s2, w }
-          d.isDemo = false
         }
       })
     }
@@ -231,31 +237,12 @@ export function Stage() {
     return () => el.removeEventListener('wheel', onWheel)
   }, [])
 
-  const list = allTemplates({ userTemplates })
-  const idx = list.findIndex((t) => t.id === design.templateId)
-  const tpl = findTemplate({ userTemplates }, design.templateId)
-
   return (
     <main className="stage">
-      <div className="stage-top">
-        <button className="stage-nav" onClick={() => stepTemplate(-1)} title="القالب السابق (→)">
-          <ChevronRight size={18} />
-        </button>
-        <div className="stage-title">
-          <strong>{tpl?.name ?? 'قالب مخصص'}</strong>
-          <span>
-            {tpl?.nameEn ?? 'Custom'} · {idx >= 0 ? `${idx + 1} / ${list.length}` : '—'}
-          </span>
-        </div>
-        <button className="stage-nav" onClick={() => stepTemplate(1)} title="القالب التالي (←)">
-          <ChevronLeft size={18} />
-        </button>
-      </div>
-
       <div
         ref={wrapRef}
         className={`stage-wrap ${dragOver ? 'drag-over' : ''}`}
-        onPointerDown={() => select(null)}
+        onPointerDown={() => select(null, false)}
         onDragOver={(e) => {
           if (e.dataTransfer.types.includes('Files')) {
             e.preventDefault()
@@ -273,7 +260,7 @@ export function Stage() {
         <div className="stage-canvas" style={{ width: POSTER_W * scale, height: POSTER_H * scale }}>
           <div style={{ position: 'absolute', left: 0, top: 0, transform: `scale(${scale})`, transformOrigin: '0 0', width: POSTER_W, height: POSTER_H }}>
             <EditCtx.Provider value={api}>
-              <Poster design={design} brand={brand} partners={partners} fontsVersion={fontsVersion} />
+              <Poster ref={posterRef} design={design} brand={brand} partners={partners} fontsVersion={fontsVersion} placeholders="edit" />
             </EditCtx.Provider>
           </div>
         </div>
@@ -287,33 +274,17 @@ export function Stage() {
       </div>
 
       <div className="stage-bottom">
-        <button className="chip-btn accent" onClick={() => emptyTemplate()} title="إزالة المحتوى التجريبي والتعديل داخل القالب مباشرة">
-          <Eraser size={16} /> تفريغ القالب
-        </button>
-        <button
-          className="chip-btn"
-          onClick={async () => {
-            const f = await pickFile()
-            if (f[0]) importImage(f[0])
-          }}
-        >
-          <ImagePlus size={16} /> صورة منتج
-        </button>
-        {!design.isDemo && (
-          <button className="chip-btn" onClick={() => restoreDemo()} title="إعادة المحتوى التجريبي للقالب">
-            <Sparkles size={16} /> المحتوى التجريبي
-          </button>
-        )}
-        <span className="flex-1" />
-        <button className="chip-btn ghost" onClick={() => change((d) => void (d.style = structuredClone(tpl?.style ?? d.style)))} title="إلغاء تعديلات التصميم والعودة لنمط القالب">
-          <RotateCcw size={15} />
-        </button>
+        <span className="stage-hint">انقر على أي عنصر لتحديده · نقرتان لتعديل النص · اسحب لتحريكه</span>
         <div className="zoom-ctl">
-          <button onClick={() => setZoom(Math.max(0.15, scale / 1.2))}>−</button>
+          <button onClick={() => setZoom(Math.max(0.15, scale / 1.2))} title="تصغير">
+            <Minus size={14} />
+          </button>
           <button onClick={() => setZoom('fit')} title="ملاءمة الشاشة">
             <Maximize2 size={13} /> {Math.round(scale * 100)}%
           </button>
-          <button onClick={() => setZoom(Math.min(2, scale * 1.2))}>+</button>
+          <button onClick={() => setZoom(Math.min(2, scale * 1.2))} title="تكبير">
+            <Plus size={14} />
+          </button>
         </div>
       </div>
     </main>

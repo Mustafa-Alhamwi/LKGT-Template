@@ -10,8 +10,8 @@ const isolation = {
 export default defineConfig({
   base: './',
   plugins: [react()],
-  server: { port: 5173, open: true, headers: isolation },
-  preview: { port: 4173, open: true, headers: isolation },
+  server: { port: 5173, host: true, open: false, headers: isolation },
+  preview: { port: 4173, host: true, open: false, headers: isolation },
   worker: { format: 'es' },
   build: { chunkSizeWarningLimit: 1500 },
 })

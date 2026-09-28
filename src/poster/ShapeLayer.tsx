@@ -148,6 +148,87 @@ export function ShapeLayer({ shape, box }: { shape: ShapeStyle; box: Rect | null
       )
       break
     }
+    case 'card': {
+      const x0 = b.x - shape.spread * b.w
+      const x1 = b.x + b.w + shape.spread * b.w
+      const y0 = b.y + shape.top * b.h
+      const y1 = bottom + shape.bottom
+      body = (
+        <rect
+          x={x0}
+          y={y0}
+          width={x1 - x0}
+          height={y1 - y0}
+          rx={shape.radius}
+          fill={fill}
+          {...hit}
+          style={{ ...hit.style, filter: 'drop-shadow(0 34px 44px rgba(20,20,30,0.16)) drop-shadow(0 4px 8px rgba(20,20,30,0.06))' }}
+        />
+      )
+      break
+    }
+    case 'wave': {
+      const y0 = b.y + shape.top * b.h
+      const A = 46 * shape.scale
+      const yb = POSTER_H + 20
+      body = (
+        <path
+          d={`M0 ${y0} C ${POSTER_W * 0.2} ${y0 - A * 1.6}, ${POSTER_W * 0.34} ${y0 + A * 1.5}, ${POSTER_W * 0.52} ${y0 - A * 0.1} S ${POSTER_W * 0.84} ${y0 - A * 1.7}, ${POSTER_W} ${y0 + A * 0.3} L ${POSTER_W} ${yb} L0 ${yb} Z`}
+          fill={fill}
+          transform={`translate(0 ${shape.offsetY - 0}) translate(${shape.offsetX} 0)`}
+          {...hit}
+        />
+      )
+      break
+    }
+    case 'arcs': {
+      const r = Math.max(b.w, b.h) * 0.62 * shape.scale
+      const gap = shape.stroke * 3.6
+      body = (
+        <g fill="none" stroke={shape.color} strokeWidth={shape.stroke} strokeLinecap="round" {...hit}>
+          {[0, 1, 2].map((i) => {
+            const rr = r - i * gap
+            const a0 = (-58 + i * 6) * (Math.PI / 180)
+            const a1 = (58 - i * 6) * (Math.PI / 180)
+            const x0 = cx + rr * Math.cos(a0)
+            const y0 = cy + rr * Math.sin(a0)
+            const x1 = cx + rr * Math.cos(a1)
+            const y1 = cy + rr * Math.sin(a1)
+            const flip = i % 2 === 0
+            return (
+              <path
+                key={i}
+                d={flip ? `M ${x0} ${y0} A ${rr} ${rr} 0 0 0 ${x1} ${y1}` : `M ${2 * cx - x0} ${y0} A ${rr} ${rr} 0 0 1 ${2 * cx - x1} ${y1}`}
+                opacity={1 - i * 0.25}
+              />
+            )
+          })}
+        </g>
+      )
+      break
+    }
+    case 'orbit': {
+      const r = Math.max(b.w * 0.62, b.h * 0.78) * shape.scale
+      const dots = [30, 150, 250, 330]
+      body = (
+        <g fill="none" {...hit}>
+          <circle cx={cx} cy={cy} r={r} stroke={shape.color} strokeWidth={shape.stroke} strokeDasharray="2 14" strokeLinecap="round" opacity={0.9} />
+          <circle cx={cx} cy={cy} r={r * 0.82} stroke={shape.color} strokeWidth={Math.max(1.5, shape.stroke / 2)} opacity={0.35} />
+          {dots.map((a, i) => (
+            <circle
+              key={a}
+              cx={cx + r * Math.cos((a * Math.PI) / 180)}
+              cy={cy + r * Math.sin((a * Math.PI) / 180)}
+              r={i % 2 ? 9 : 14}
+              fill={i % 2 ? shape.color : '#fff'}
+              stroke={shape.color}
+              strokeWidth={4}
+            />
+          ))}
+        </g>
+      )
+      break
+    }
     case 'blob': {
       const s = (Math.max(b.w, b.h) / 200) * 1.25 * shape.scale
       body = (

@@ -13,7 +13,7 @@ import { offscreenRoot } from './offscreen'
  * PNG/JPG بمقاس 1080×1440 (أو ضعفه للدقة العالية)
  * ------------------------------------------------------------------ */
 
-const EDITOR_ONLY = ['lk-sel', 'lk-handle', 'lk-dropzone', 'lk-ghost', 'lk-product-loading']
+const EDITOR_ONLY = ['lk-sel', 'lk-handle', 'lk-dropzone', 'lk-ghost', 'lk-product-loading', 'lk-ph']
 
 let fallbackCss: string | null = null
 

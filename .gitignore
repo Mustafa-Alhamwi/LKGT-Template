@@ -4,3 +4,4 @@ dist
 .DS_Store
 # نموذج التفريغ (يُنزَّل بالأمر npm run model:offline)
 public/imgly
+public/__test

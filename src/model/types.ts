@@ -35,6 +35,10 @@ export interface MaskCleanup {
   choke: number
   /** تنعيم الحواف (px) */
   feather: number
+  /** تنعيم الشكل العام للحواف (0..6) */
+  smooth?: number
+  /** إزالة هالة لون الخلفية من الحواف */
+  decontaminate?: boolean
 }
 
 export interface ProductContent {
@@ -51,6 +55,11 @@ export interface ProductContent {
   place: Placement | null
   enhance: { brightness: number; contrast: number; saturate: number }
   visible: boolean
+  flip?: boolean
+  rotate?: number
+  opacity?: number
+  /** ابدأ من قناع فارغ (للتحديد اليدوي بالكامل) */
+  emptyBase?: boolean
 }
 
 export interface AdTexts {
@@ -64,11 +73,19 @@ export interface AdTexts {
   kicker: string
 }
 
+export interface ExtraText {
+  id: string
+  text: string
+  style: TextStyle
+}
+
 export interface AdContent {
   scene: SceneContent | null
   product: ProductContent | null
   texts: AdTexts
   partnerLogoId: string | null
+  /** نصوص إضافية حرّة أضافها المستخدم */
+  extras?: ExtraText[]
 }
 
 /* ------------------------------ Style ------------------------------ */
@@ -102,6 +119,12 @@ export interface DecoStyle {
   accent: string
   /** يمتد الإطار بكامل عرض الكتلة */
   full: boolean
+  /** لون ثانٍ = تدرج داخل البطاقة ('' = بدون) */
+  fill2?: string
+  angle?: number
+  shadowSize?: number
+  shadowColor?: string
+  blur?: number
 }
 
 export interface TextStyle {
@@ -123,6 +146,20 @@ export interface TextStyle {
   /** إزاحة عمودية إضافية قبل العنصر */
   marginTop: number
   opacity: number
+  /** عنصر حرّ: مفصول عن الكتلة وله موضعه الخاص */
+  free?: boolean
+  fx?: number
+  fy?: number
+  fw?: number
+  rotate?: number
+  align?: 'inherit' | 'center' | 'right' | 'left'
+  gradient?: boolean
+  color2?: string
+  gradAngle?: number
+  strokeW?: number
+  strokeColor?: string
+  textShadow?: 'none' | 'soft' | 'glow' | 'hard'
+  shadowColor?: string
 }
 
 export interface TextPanel {
@@ -157,6 +194,10 @@ export type ShapeKind =
   | 'band'
   | 'frame'
   | 'blob'
+  | 'card'
+  | 'wave'
+  | 'arcs'
+  | 'orbit'
 
 export interface ShapeStyle {
   kind: ShapeKind
@@ -195,12 +236,27 @@ export type ContactTheme =
   | 'outline-light'
   | 'split'
 
-export type BackdropKind = 'solid' | 'studio' | 'studio-dark' | 'spot' | 'red-sweep' | 'mesh' | 'split' | 'paper'
+export type BackdropKind =
+  | 'solid'
+  | 'studio'
+  | 'studio-dark'
+  | 'spot'
+  | 'red-sweep'
+  | 'mesh'
+  | 'split'
+  | 'paper'
+  | 'aurora'
+  | 'peach'
+  | 'mist'
+  | 'linear'
+  | 'grid'
+  | 'dots'
 
 export interface BackdropStyle {
   kind: BackdropKind
   color: string
   color2: string
+  angle?: number
 }
 
 export interface FadeStyle {
@@ -223,7 +279,7 @@ export interface SceneFx {
   grayscale: number
 }
 
-export type ShadowKind = 'none' | 'soft' | 'contact' | 'float' | 'glow' | 'long'
+export type ShadowKind = 'none' | 'soft' | 'contact' | 'float' | 'glow' | 'long' | 'outline'
 
 export interface ProductFx {
   shadow: ShadowKind
@@ -247,6 +303,10 @@ export type DecorKind =
   | 'badge'
   | 'arc'
   | 'noise'
+  | 'wave'
+  | 'blobs'
+  | 'plus'
+  | 'ribbon'
 
 export interface DecorItem {
   id: string
@@ -292,7 +352,7 @@ export interface Template {
   category: CategoryId
   builtIn: boolean
   style: TemplateStyle
-  demoId: string
+  demoId?: string
   /** وسوم للبحث */
   tags: string[]
   /** محتوى تجريبي مخصص (لقوالب المستخدم) */
@@ -305,8 +365,8 @@ export interface Design {
   templateId: string
   content: AdContent
   style: TemplateStyle
-  /** المحتوى الحالي هو المحتوى التجريبي للقالب */
-  isDemo: boolean
+  /** المستخدم بدأ العمل (لا يزال المحتوى نصوصاً نائبة إن كانت false) */
+  touched: boolean
 }
 
 /* ------------------------------ Brand ------------------------------ */
@@ -337,6 +397,7 @@ export type Selection =
   | { kind: 'shape' }
   | { kind: 'textBlock' }
   | { kind: 'text'; key: TextKey }
+  | { kind: 'extra'; id: string }
   | { kind: 'contact' }
   | { kind: 'partner' }
   | { kind: 'logo' }

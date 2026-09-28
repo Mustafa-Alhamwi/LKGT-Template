@@ -1,26 +1,18 @@
 import { useState } from 'react'
-import { Check, X, AlertTriangle, HardDriveDownload, Upload, Trash2, ArrowLeftRight } from 'lucide-react'
+import { AlertTriangle, ArrowLeftRight, Check, HardDriveDownload, Trash2, Upload, X } from 'lucide-react'
 import { saveAsTemplate, setBrand, toast, useEditor } from '../store/editor'
-import {
-  AR_WEIGHTS,
-  LAT_WEIGHTS,
-  canQueryLocalFonts,
-  clearImportedFonts,
-  importFontFiles,
-  importFromDevice,
-} from '../lib/fonts'
-import { Button, Row, Segmented, Slider, Toggle } from '../ui/controls'
+import { AR_WEIGHTS, LAT_WEIGHTS, UI_WEIGHTS, canQueryLocalFonts, clearImportedFonts, importFontFiles, importFromDevice } from '../lib/fonts'
+import { Btn, Chips, Slider } from '../ui/kit'
 import { pickFile } from '../lib/importer'
-import { LogoOverride } from './inspect/BrandPanels'
 import { reloadFonts } from '../lib/fontBoot'
 
-function Modal({ title, children, onClose, wide }: { title: string; children: React.ReactNode; onClose: () => void; wide?: boolean }) {
+export function Modal({ title, children, onClose, wide }: { title: string; children: React.ReactNode; onClose: () => void; wide?: boolean }) {
   return (
     <div className="modal-back" onPointerDown={onClose}>
       <div className={`modal ${wide ? 'wide' : ''}`} onPointerDown={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <h3>{title}</h3>
-          <button className="icon-btn" onClick={onClose}>
+          <button className="ibtn" onClick={onClose}>
             <X size={18} />
           </button>
         </div>
@@ -32,45 +24,38 @@ function Modal({ title, children, onClose, wide }: { title: string; children: Re
 
 const close = () => useEditor.setState({ dialog: null })
 
+function FontRows({ title, rows, family, dir }: { title: string; rows: { w: number; label: string; ar: string; origin?: string }[]; family: (w: number) => string; dir?: 'ltr' }) {
+  return (
+    <div>
+      <h4 className="ftitle">{title}</h4>
+      {rows.map((r) => (
+        <div key={r.w} className="font-line" dir={dir}>
+          <span style={{ fontFamily: `${family(r.w)}, Tajawal, sans-serif`, fontWeight: r.w }}>{dir ? `LKGT Studio ${r.label}` : `أبجد هوز ${r.ar}`}</span>
+          <small>{r.w}</small>
+          {r.origin === 'local' || r.origin === 'file' ? <b className="ok">✓</b> : <b className="bad">غير موجود</b>}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function FontsTab() {
   const fonts = useEditor((s) => s.fonts)
   const [busy, setBusy] = useState(false)
-  const origin = (o: string | undefined) =>
-    o === 'local' ? <span className="ok">مثبت ✓</span> : o === 'file' ? <span className="ok">ملف ✓</span> : <span className="bad">غير موجود</span>
   return (
     <div className="settings-block">
       <p>
-        العربي دائماً بخط <b>Araboto</b> والإنكليزي دائماً بخط <b>HP Simplified</b> — يتبدّل الخط تلقائياً حرفاً بحرف حتى داخل نفس السطر، ولكل نص وزن عربي
-        ووزن إنكليزي مستقلان.
+        <b>واجهة البرنامج</b> بخط <b>Qomra</b>، و<b>التصاميم</b>: العربي بخط <b>Araboto</b> والإنكليزي بخط <b>HP Simplified</b> — يتبدّل حرفاً بحرف داخل السطر الواحد.
       </p>
-      <div className="font-table">
-        <div>
-          <h4>Araboto</h4>
-          {AR_WEIGHTS.map((w) => (
-            <div key={w.w} className="font-line">
-              <span style={{ fontFamily: '"LK Ar", Tajawal, sans-serif', fontWeight: w.w }}>أبجد هوز {w.ar}</span>
-              <small>{w.w}</small>
-              {origin(fonts?.ar[w.w])}
-            </div>
-          ))}
-        </div>
-        <div>
-          <h4>HP Simplified</h4>
-          {LAT_WEIGHTS.map((w) => (
-            <div key={w.w} className="font-line" dir="ltr">
-              <span style={{ fontFamily: `"LK Lat ${w.w}", Tajawal, sans-serif`, fontWeight: w.w }}>LKGT Studio {w.label}</span>
-              <small>{w.w}</small>
-              {origin(fonts?.lat[w.w])}
-            </div>
-          ))}
-        </div>
+      <div className="font-table three">
+        <FontRows title="Qomra (الواجهة)" family={() => '"LK UI"'} rows={UI_WEIGHTS.map((w) => ({ ...w, origin: fonts?.ui[w.w] }))} />
+        <FontRows title="Araboto (عربي)" family={() => '"LK Ar"'} rows={AR_WEIGHTS.map((w) => ({ ...w, origin: fonts?.ar[w.w] }))} />
+        <FontRows title="HP Simplified" family={(w) => `"LK Lat ${w}"`} dir="ltr" rows={LAT_WEIGHTS.map((w) => ({ ...w, origin: fonts?.lat[w.w] }))} />
       </div>
-      <p className="muted small">
-        البرنامج يكتشف الخطوط المثبتة على جهازك تلقائياً. إذا ظهر «غير موجود» لوزن مثبت عندك، استخدم أحد الخيارين (مرة واحدة فقط — تُحفظ داخل البرنامج):
-      </p>
-      <Row>
+      <p className="hint">يكتشف البرنامج الخطوط المثبتة على جهازك تلقائياً. إذا ظهر «غير موجود» لوزن مثبت عندك، استورده مرة واحدة (يُحفظ داخل البرنامج):</p>
+      <div className="row-btns">
         {canQueryLocalFonts && (
-          <Button
+          <Btn
             variant="primary"
             icon={<HardDriveDownload size={15} />}
             disabled={busy}
@@ -79,7 +64,7 @@ function FontsTab() {
               try {
                 const r = await importFromDevice()
                 await reloadFonts()
-                toast(r.added.length ? `تم استيراد ${r.added.length} خط من الجهاز ✓` : 'لم يُعثر على Araboto أو HP Simplified', r.added.length ? 'ok' : 'error')
+                toast(r.added.length ? `تم استيراد ${r.added.length} خط من الجهاز` : 'لم يُعثر على Qomra أو Araboto أو HP Simplified', r.added.length ? 'ok' : 'error')
               } catch (e) {
                 toast(`تعذّر الوصول للخطوط: ${String(e)}`, 'error')
               } finally {
@@ -88,9 +73,9 @@ function FontsTab() {
             }}
           >
             استيراد من خطوط الجهاز
-          </Button>
+          </Btn>
         )}
-        <Button
+        <Btn
           icon={<Upload size={15} />}
           disabled={busy}
           onClick={async () => {
@@ -104,8 +89,8 @@ function FontsTab() {
           }}
         >
           رفع ملفات الخطوط
-        </Button>
-        <Button
+        </Btn>
+        <Btn
           variant="ghost"
           icon={<Trash2 size={15} />}
           onClick={async () => {
@@ -115,10 +100,10 @@ function FontsTab() {
           }}
         >
           مسح المستوردة
-        </Button>
-      </Row>
-      <p className="muted small">
-        بديل ثالث: انسخ ملفات الخطوط (.ttf / .otf) إلى المجلد <code>src/fonts</code> داخل المشروع فتُحمَّل تلقائياً مع البرنامج.
+        </Btn>
+      </div>
+      <p className="hint">
+        أو انسخ ملفات الخطوط (.ttf / .otf) إلى المجلد <code>src/fonts</code> فتُحمَّل تلقائياً — يتعرف البرنامج على الخط من اسمه داخل الملف.
       </p>
     </div>
   )
@@ -128,12 +113,9 @@ function BrandTab() {
   const brand = useEditor((s) => s.brand)
   return (
     <div className="settings-block">
-      <Row>
-        <Button icon={<ArrowLeftRight size={15} />} onClick={() => setBrand({ logoSide: brand.logoSide === 'right' ? 'left' : 'right' })}>
-          لوغو LKGT على {brand.logoSide === 'right' ? 'اليمين' : 'اليسار'} — تبديل
-        </Button>
-      </Row>
-      <LogoOverride />
+      <Btn icon={<ArrowLeftRight size={15} />} onClick={() => setBrand({ logoSide: brand.logoSide === 'right' ? 'left' : 'right' })}>
+        لوغو LKGT على {brand.logoSide === 'right' ? 'اليمين' : 'اليسار'} — تبديل
+      </Btn>
       <div className="grid-2">
         <Slider label="ارتفاع لوغو LKGT" value={brand.logo.h} min={60} max={220} onChange={(v) => setBrand({ logo: { ...brand.logo, h: v } })} />
         <Slider label="بعده عن الأعلى" value={brand.logo.top} min={0} max={200} onChange={(v) => setBrand({ logo: { ...brand.logo, top: v } })} />
@@ -146,7 +128,7 @@ function BrandTab() {
         <Slider label="ارتفاع الشريط" value={brand.contact.h} min={36} max={100} onChange={(v) => setBrand({ contact: { ...brand.contact, h: v } })} />
         <Slider label="حجم خط الشريط" value={brand.contact.fontSize} min={16} max={40} onChange={(v) => setBrand({ contact: { ...brand.contact, fontSize: v } })} />
       </div>
-      <p className="muted small">هذه القيم ثابتة لكل القوالب (هوية موحدة) — عدّلها هنا فقط عند الحاجة.</p>
+      <p className="hint">هذه القيم ثابتة لكل القوالب (هوية موحدة) — عدّلها هنا فقط عند الحاجة.</p>
     </div>
   )
 }
@@ -155,8 +137,8 @@ function AiTab() {
   const q = useEditor((s) => s.removalQuality)
   return (
     <div className="settings-block">
-      <p>التفريغ يتم بالكامل داخل متصفحك (بدون رفع الصور لأي خادم). أول مرة يُحمَّل النموذج من الإنترنت ثم يُحفظ.</p>
-      <Segmented
+      <p>التفريغ الذكي يتم بالكامل داخل متصفحك (لا تُرفع الصور لأي خادم). أول مرة يُحمَّل النموذج من الإنترنت ثم يُحفظ.</p>
+      <Chips
         value={q}
         options={[
           { value: 'small', label: 'سريع (~40MB)' },
@@ -164,8 +146,8 @@ function AiTab() {
         ]}
         onChange={(v) => useEditor.setState({ removalQuality: v })}
       />
-      <p className="muted small">
-        للعمل بدون إنترنت نهائياً: شغّل الأمر <code>npm run model:offline</code> مرة واحدة فينسخ النموذج إلى <code>public/imgly</code>.
+      <p className="hint">
+        للعمل بدون إنترنت نهائياً: شغّل <code>npm run model:offline</code> مرة واحدة فينسخ النموذج إلى <code>public/imgly</code>.
       </p>
     </div>
   )
@@ -174,15 +156,15 @@ function AiTab() {
 export function SettingsDialog() {
   const [tab, setTab] = useState<'fonts' | 'brand' | 'ai'>('fonts')
   const fonts = useEditor((s) => s.fonts)
-  const missing = fonts && (Object.values(fonts.ar).every((v) => v === 'missing') || Object.values(fonts.lat).every((v) => v === 'missing'))
+  const missing = fonts && [fonts.ui, fonts.ar, fonts.lat].some((g) => Object.values(g).every((v) => v === 'missing'))
   return (
     <Modal title="الإعدادات" onClose={close} wide>
       {missing && (
         <div className="alert">
-          <AlertTriangle size={16} /> لم يتم العثور على خطوط الهوية بالكامل — يُستخدم خط بديل مؤقتاً.
+          <AlertTriangle size={16} /> لم يُعثر على أحد الخطوط بالكامل — يُستخدم خط بديل مؤقتاً.
         </div>
       )}
-      <Segmented
+      <Chips
         value={tab}
         options={[
           { value: 'fonts', label: 'الخطوط' },
@@ -200,47 +182,38 @@ export function SettingsDialog() {
 
 export function SaveTemplateDialog() {
   const [name, setName] = useState('')
-  const [withContent, setWithContent] = useState(true)
   const save = () => {
     const n = name.trim() || `قالبي ${new Date().toLocaleDateString('ar')}`
-    saveAsTemplate(n, withContent)
-    toast(`تم حفظ القالب «${n}» في مكتبتك ✓`, 'ok')
+    saveAsTemplate(n)
+    toast(`تم حفظ القالب «${n}» في «قوالبي»`, 'ok')
     close()
   }
   return (
     <Modal title="حفظ كقالب جديد" onClose={close}>
-      <p className="muted">يُحفظ التصميم الحالي (الألوان، الأشكال، مواضع النصوص، شريط التواصل...) كقالب جديد في المكتبة.</p>
-      <input
-        className="ui-input big"
-        autoFocus
-        placeholder="اسم القالب"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        onKeyDown={(e) => e.key === 'Enter' && save()}
-      />
-      <Toggle label="حفظ المحتوى الحالي كمحتوى تجريبي للقالب" checked={withContent} onChange={setWithContent} />
-      <Row>
-        <Button variant="primary" icon={<Check size={15} />} onClick={save}>
+      <p className="hint">يُحفظ شكل التصميم الحالي (الألوان، الأشكال، البطاقات، مواضع النصوص، شريط التواصل…) كقالب جديد فارغ في «قوالبي».</p>
+      <input className="txi big" autoFocus placeholder="اسم القالب" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && save()} />
+      <div className="row-btns">
+        <Btn variant="primary" icon={<Check size={15} />} onClick={save}>
           حفظ
-        </Button>
-        <Button variant="ghost" onClick={close}>
+        </Btn>
+        <Btn variant="ghost" onClick={close}>
           إلغاء
-        </Button>
-      </Row>
+        </Btn>
+      </div>
     </Modal>
   )
 }
 
 const SHORTCUTS: [string, string][] = [
-  ['← / →', 'التنقل بين القوالب'],
   ['نقر مزدوج على نص', 'تعديل النص مباشرة'],
   ['Ctrl + Enter / Esc', 'إنهاء تعديل النص'],
   ['سحب', 'تحريك النصوص / المنتج / الخلفية / الشكل'],
   ['Shift + سحب', 'تحريك أفقي أو عمودي فقط'],
   ['عجلة الفأرة', 'تكبير الخلفية أو المنتج المحدد'],
   ['الأسهم (مع تحديد)', 'تحريك دقيق 1px — مع Shift 10px'],
-  ['Delete', 'إخفاء القسم المحدد'],
-  ['Ctrl + Z / Ctrl + Y', 'تراجع / إعادة'],
+  ['← / → (بدون تحديد)', 'القالب التالي / السابق'],
+  ['Delete', 'إخفاء/حذف العنصر المحدد'],
+  ['Ctrl + Z / Ctrl + Y', 'تراجع / إعادة (يعمل بأي لغة كتابة)'],
   ['Ctrl + E', 'تصدير'],
   ['Ctrl + V', 'لصق صورة من الحافظة'],
   ['Esc', 'إلغاء التحديد'],

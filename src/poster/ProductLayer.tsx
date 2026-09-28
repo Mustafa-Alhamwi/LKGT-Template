@@ -24,6 +24,11 @@ function productFilter(p: ProductContent, fx: ProductFx): string {
     case 'contact':
       parts.push(`drop-shadow(0 6px 8px rgba(0,0,0,${o * 0.35}))`)
       break
+    case 'outline': {
+      const c = fx.shadowColor
+      parts.push(`drop-shadow(3px 0 0 ${c})`, `drop-shadow(-3px 0 0 ${c})`, `drop-shadow(0 3px 0 ${c})`, `drop-shadow(0 -3px 0 ${c})`, `drop-shadow(0 16px 22px rgba(0,0,0,${o * 0.6}))`)
+      break
+    }
   }
   return parts.join(' ') || 'none'
 }
@@ -107,7 +112,8 @@ export function ProductLayer({ product, cutout, bbox, fx, busy }: Props) {
           filter: productFilter(product, fx),
           pointerEvents: edit ? 'auto' : 'none',
           cursor: edit ? 'move' : undefined,
-          opacity: busy ? 0.85 : 1,
+          opacity: (busy ? 0.85 : 1) * (product.opacity ?? 1),
+          transform: `${product.flip ? 'scaleX(-1) ' : ''}rotate(${product.rotate ?? 0}deg)`,
         }}
       />
       {selected && (

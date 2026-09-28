@@ -1,6 +1,9 @@
 import { POSTER_H, POSTER_W } from '../model/types'
 import type { Placement, ProductContent, SceneContent, TemplateStyle } from '../model/types'
 import type { AssetInfo } from '../lib/assets'
+import { assetInfoSync } from '../lib/assets'
+import { cutoutSync } from '../lib/cutout'
+import type { Design } from '../model/types'
 import type { Cutout } from '../lib/cutout'
 
 export interface Rect {
@@ -62,4 +65,43 @@ export function productSourceRect(
 export function productBBox(src: Rect, cut: Cutout): Rect {
   const s = src.w / cut.srcW
   return { x: src.x + cut.crop.x * s, y: src.y + cut.crop.y * s, w: cut.crop.w * s, h: cut.crop.h * s }
+}
+
+
+/** مستطيل صورة المنتج المصدر في التصميم الحالي (null إن لم يجهز التفريغ) */
+export function productRectOf(d: Design): Rect | null {
+  const p = d.content.product
+  if (!p) return null
+  const cut = cutoutSync(p)
+  if (!cut) return null
+  const sc = sceneRect(d.content.scene, assetInfoSync(d.content.scene?.assetId))
+  return productSourceRect(p, sc, cut, d.style)
+}
+
+/** حدود المنتج المرئية الآن */
+export function productBoxOf(d: Design): Rect | null {
+  const p = d.content.product
+  const cut = p ? cutoutSync(p) : null
+  const r = productRectOf(d)
+  return r && cut ? productBBox(r, cut) : null
+}
+
+/** تحريك/تحجيم المنتج حسب حدوده المرئية: المركز الأفقي والحافة السفلية والعرض */
+export function setProductBox(d: Design, box: { cx?: number; bottom?: number; w?: number }) {
+  const p = d.content.product
+  const cut = p ? cutoutSync(p) : null
+  const r = productRectOf(d)
+  if (!p || !cut || !r) return
+  const cur = productBBox(r, cut)
+  const w = box.w ?? cur.w
+  const cx = box.cx ?? cur.x + cur.w / 2
+  const bottom = box.bottom ?? cur.y + cur.h
+  const s = w / cut.crop.w
+  const srcW = cut.srcW * s
+  p.linked = false
+  p.place = {
+    x: cx - (cut.crop.x + cut.crop.w / 2) * s,
+    y: bottom - (cut.crop.y + cut.crop.h) * s,
+    w: srcW,
+  }
 }
