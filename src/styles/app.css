@@ -3632,3 +3632,217 @@ kbd.rec {
   border-color: rgba(80, 160, 255, 0.4);
   color: #4c9bff;
 }
+
+/* ------------------------------ التصدير المتقدم ------------------------------ */
+.xp {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+.xp-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: sticky;
+  top: 0;
+}
+.xp-nav button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1.5px solid var(--line-2);
+  background: var(--raised);
+  color: var(--text-2);
+  text-align: start;
+  transition: 0.15s;
+}
+.xp-nav button span {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.35;
+}
+.xp-nav button b {
+  color: var(--text);
+  font-size: 13.5px;
+}
+.xp-nav button small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.xp-nav button:hover {
+  border-color: var(--muted);
+}
+.xp-nav button.on {
+  border-color: var(--red);
+  background: var(--red-soft);
+  color: var(--red);
+}
+.xp-main {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.xp-f {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.xp-f > span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.xp-sizes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 6px;
+}
+.xp-sizes button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1.5px solid var(--line-2);
+  background: var(--raised);
+  color: var(--text-2);
+  text-align: start;
+}
+.xp-sizes button b {
+  font-size: 12.5px;
+  color: var(--text);
+}
+.xp-sizes button small {
+  font-size: 11px;
+  color: var(--muted);
+  direction: ltr;
+}
+.xp-sizes button.on {
+  border-color: var(--red);
+  background: var(--red-soft);
+}
+.xp-tokens {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.xp-tokens button {
+  border: 1px dashed var(--line-2);
+  background: transparent;
+  color: var(--text-2);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 11.5px;
+}
+.xp-tokens button:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+.xp-layers {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.xp-layers span {
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.xp-motion {
+  display: grid;
+  grid-template-columns: 210px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+.mp {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 10px 36px -14px rgba(0, 0, 0, 0.7);
+  line-height: 0;
+}
+.mp canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.mp-load {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+}
+.xp-presets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.xp-presets button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1.5px solid var(--line-2);
+  background: var(--raised);
+  text-align: start;
+  color: var(--text-2);
+}
+.xp-presets button b {
+  color: var(--text);
+  font-size: 12.5px;
+}
+.xp-presets button small {
+  font-size: 10.5px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.xp-presets button.on {
+  border-color: var(--red);
+  background: var(--red-soft);
+}
+.xp-go {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
+}
+.xp-prog {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.xp-prog-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.xp-prog .task-bar {
+  width: 100%;
+}
+@media (max-width: 860px) {
+  .xp,
+  .xp-motion {
+    grid-template-columns: 1fr;
+  }
+  .xp-nav {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}

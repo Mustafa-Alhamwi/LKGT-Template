@@ -154,11 +154,12 @@ export async function renderCanvas(
       fontEmbedCSS,
       backgroundColor: opts.format === 'jpg' ? '#ffffff' : undefined,
       filter: (el) => {
-        if (!(el instanceof HTMLElement)) return true
+        // عناصر SVG (مثل طبقة الشكل) ليست HTMLElement — لكنها تحمل data-layer أيضاً
+        if (!(el instanceof Element)) return true
         if (EDITOR_ONLY.some((c) => el.classList?.contains(c))) return false
         const L = opts.layers
         if (L) {
-          const layer = el.dataset?.layer
+          const layer = (el as HTMLElement | SVGElement).dataset?.layer
           if (layer) {
             if (L.include && !L.include.includes(layer)) return false
             if (L.exclude?.includes(layer)) return false

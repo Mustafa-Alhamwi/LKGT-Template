@@ -1,5 +1,8 @@
 import { allPartners, allTemplates, findTemplate, setTask, templateStyle, toast, useEditor } from '../store/editor'
 import { downloadBlob, exportFileName, renderDesign } from './exporter'
+import { buildName, titleOf } from './naming'
+import { categoryDef } from '../model/categories'
+import { canvasOf } from '../model/types'
 
 /* أوامر عامة (تصدير...) */
 
@@ -13,8 +16,10 @@ export async function exportCurrent() {
       format: s.exportFormat,
     })
     const t = findTemplate(s, s.design.templateId)
-    downloadBlob(blob, exportFileName(s.design, t?.nameEn ?? 'Custom', s.exportFormat))
-    toast(`تم التصدير ✓ (${1080 * s.exportScale}×${1440 * s.exportScale})`, 'ok')
+    const cv = canvasOf(s.design)
+    const name = buildName(s.prefs.nameTemplate || '{title}', { title: titleOf(s.design), template: t?.nameEn ?? 'Custom', size: cv.format ?? `${cv.w}x${cv.h}`, n: s.slideIndex + 1, project: s.projectName, category: categoryDef(s.design.category).name, ext: s.exportFormat })
+    downloadBlob(blob, name)
+    toast(`تم التصدير ✓ (${cv.w * s.exportScale}×${cv.h * s.exportScale})`, 'ok')
   } catch (e) {
     console.error(e)
     toast(`فشل التصدير: ${String(e)}`, 'error')
