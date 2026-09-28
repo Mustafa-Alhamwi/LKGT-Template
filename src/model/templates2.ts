@@ -12,7 +12,7 @@ const CRIMSON = '#E4343E'
 const GOLD = '#F5C542'
 const YELLOW = '#FFD23F'
 const NAVY = '#1B2A4A'
-const SOFT = '#8B8B93'
+const SOFT = '#5C5C68'
 
 function tplc(category: CategoryId, id: string, name: string, nameEn: string, tags: string[], st: DeepPartial<TemplateStyle>): Template {
   return { id, name, nameEn, category, builtIn: true, tags, style: style(st) }
@@ -103,7 +103,7 @@ const truefalse: Template[] = [
       kicker: { color: RED, decoStyle: { fill: WHITE, radius: 999, padX: 36, padY: 10, full: false, shadow: true } },
       title: { color: WHITE },
       tagline: { color: '#FFE3E1' },
-      note: { color: '#FFC2C6' },
+      note: { color: '#FFD9DC' },
       cta: { color: '#FFE3E1' },
     }),
     contact: { theme: 'white' },
@@ -443,7 +443,7 @@ const offers: Template[] = [
       oldPrice: { color: '#FFD9DC' },
       price: { color: WHITE },
       cta: { color: RED, decoStyle: { fill: WHITE, radius: 999, padX: 40, padY: 16, full: true, shadow: true } },
-      note: { color: '#FFE3E1' },
+      note: { color: WHITE },
     }),
     contact: { theme: 'white' },
   }),

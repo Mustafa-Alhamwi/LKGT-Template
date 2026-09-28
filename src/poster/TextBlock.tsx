@@ -5,7 +5,7 @@ import { fitLines, measure100, parseRich, stripMarks } from '../lib/textFit'
 import { showWhenOk } from '../model/showWhen'
 import { useAsset } from '../lib/assets'
 import { fontStack, isArabicText } from '../lib/fonts'
-import { withAlpha } from '../lib/color'
+import { alphaOf, contrastRatio, withAlpha } from '../lib/color'
 
 /* ------------------------------------------------------------------
  * كتلة النصوص: اسم المنتج (إنكليزي) + الوصف + الجملة العربية...
@@ -14,6 +14,15 @@ import { withAlpha } from '../lib/color'
  * ------------------------------------------------------------------ */
 
 const BOX_DECOS = new Set(['pill', 'box', 'outlineBox', 'glass', 'tab'])
+
+/** لون تمييز *الكلمة*: يتجنب الاختفاء فوق بطاقة تحمل لوناً مشابهاً (مثل كلمة حمراء فوق شريط أحمر) */
+export function accentColor(st: TextStyle): string {
+  const d = st.decoStyle
+  const filled = (st.deco === 'pill' || st.deco === 'box' || st.deco === 'tab') && !!d.fill && alphaOf(d.fill) > 0.45
+  if (!filled || contrastRatio(st.accent, d.fill) >= 2.2) return st.accent
+  const cands = ['#FFD84D', '#FFFFFF', '#111214'].filter((c) => contrastRatio(c, st.color) > 1.15)
+  return cands.sort((a, b) => contrastRatio(b, d.fill) - contrastRatio(a, d.fill))[0] ?? st.accent
+}
 
 function decoInset(st: TextStyle): number {
   const d = st.decoStyle
@@ -114,7 +123,7 @@ function Lines({
               ...effectStyle(st, fillUrl),
             }}
           >
-            {line.trim() === '' ? ' ' : parseRich(line).map((s, j) => (s.accent ? <span key={j} style={{ color: st.accent }}>{s.text}</span> : <span key={j}>{s.text}</span>))}
+            {line.trim() === '' ? ' ' : parseRich(line).map((s, j) => (s.accent ? <span key={j} style={{ color: accentColor(st) }}>{s.text}</span> : <span key={j}>{s.text}</span>))}
           </div>
         )
       })}
@@ -227,7 +236,7 @@ function CurveText({ value, st, w, fontsVersion }: { value: string; st: TextStyl
       >
         <textPath href={`#p${uid}`} startOffset="50%" textAnchor="middle">
           {segs.map((sg, i) => (
-            <tspan key={i} fill={sg.accent ? st.accent : fill}>
+            <tspan key={i} fill={sg.accent ? accentColor(st) : fill}>
               {sg.text}
             </tspan>
           ))}

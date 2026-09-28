@@ -150,7 +150,8 @@ export async function runCheck(): Promise<Issue[]> {
     // حجم الخط
     root.querySelectorAll<HTMLElement>('.lk-ti').forEach((el) => {
       const id = el.dataset.key ?? ''
-      const line = el.querySelector<HTMLElement>('div[dir]')
+      // أعمق سطر نصي (المزايا تُغلَّف بحاويات dir أيضاً)
+      const line = Array.from(el.querySelectorAll<HTMLElement>('div[dir]')).find((n) => !n.querySelector('div[dir]'))
       if (!line) return
       const size = parseFloat(getComputedStyle(line).fontSize)
       const isKey = (TEXT_KEYS as string[]).includes(id)

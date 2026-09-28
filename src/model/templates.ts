@@ -743,7 +743,7 @@ export const ADS_TEMPLATES: Template[] = [
       gap: 18,
       items: {
         title: txt({ fit: 'block', maxSize: 110, color: WHITE, uppercase: true, weightLat: 300, tracking: 0.05, lineHeight: 1 }),
-        subtitle: txt({ size: 26, color: RED, uppercase: true, weightLat: 700, tracking: 0.32 }),
+        subtitle: txt({ size: 26, color: '#FF5A66', uppercase: true, weightLat: 700, tracking: 0.32 }),
         tagline: txt({ size: 42, color: WHITE, weightAr: 300, marginTop: 6 }),
         note: txt({ visible: true, size: 26, color: '#8C8C93', weightAr: 400 }),
       },
