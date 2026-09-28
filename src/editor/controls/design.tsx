@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from 'react'
-import { ArrowLeftRight, Eye, EyeOff, Plus, Trash2, Upload } from 'lucide-react'
+import { ArrowLeftRight, Dices, Eye, EyeOff, Plus, Trash2, Upload } from 'lucide-react'
 import { Btn, ColorInput, Field, Group, IconBtn, Chips, Select, Slider, Switch, TextArea, Tiles } from '../../ui/kit'
 import { allPartners, changeContent, changeStyle, select, setBrand, toast, useEditor } from '../../store/editor'
 import { backdropCss } from '../../poster/Backdrop'
@@ -12,6 +12,7 @@ import { isObjectKind } from '../../poster/DecorLayer'
 import { LkgtLogo } from '../../brand/LkgtLogo'
 import { normalizeImage, putAsset, resolvePublic, useAsset } from '../../lib/assets'
 import { pickFile } from '../../lib/importer'
+import { PROC_KINDS, PROC_SAMPLES, isProc } from '../../lib/procedural'
 import type { BackdropKind, DecorItem, DecorKind, LogoVariant, PartnerLogo, PartnerVariant, ShadowKind, ShapeKind } from '../../model/types'
 
 /* ------------------------------ الخلفية ------------------------------ */
@@ -29,7 +30,11 @@ const BACKDROPS: { value: BackdropKind; label: string }[] = [
   { value: 'red-sweep', label: 'أحمر' },
   { value: 'studio-dark', label: 'داكن' },
   { value: 'spot', label: 'بقعة ضوء' },
+  { value: 'sunburst', label: 'أشعة' },
 ]
+
+/** خامات ومشاهد عرض مولّدة */
+const SCENES: { value: BackdropKind; label: string }[] = PROC_KINDS.map((k) => ({ value: k, label: PROC_SAMPLES[k].label }))
 
 const SAMPLE: Partial<Record<BackdropKind, { color: string; color2: string }>> = {
   solid: { color: '#EDEDF0', color2: '#DDDDE2' },
@@ -44,6 +49,8 @@ const SAMPLE: Partial<Record<BackdropKind, { color: string; color2: string }>> =
   'red-sweep': { color: '#D11A24', color2: '#7E0B13' },
   'studio-dark': { color: '#2A2A32', color2: '#050506' },
   spot: { color: '#0A0A0C', color2: '#55555F' },
+  sunburst: { color: '#FFE9E3', color2: '#FFC7BC' },
+  ...Object.fromEntries(PROC_KINDS.map((k) => [k, { color: PROC_SAMPLES[k].color, color2: PROC_SAMPLES[k].color2 }])),
 }
 
 export function BackdropControls() {
@@ -75,6 +82,31 @@ export function BackdropControls() {
         <ColorInput label="اللون الأول" value={b.color} onChange={(v) => changeStyle((s) => void (s.backdrop.color = v), 'bd1')} />
         <ColorInput label="اللون الثاني" value={b.color2} onChange={(v) => changeStyle((s) => void (s.backdrop.color2 = v), 'bd2')} />
         {angled && <Slider label="زاوية التدرج" value={b.angle ?? 170} min={0} max={360} unit="°" onChange={(v) => changeStyle((s) => void (s.backdrop.angle = v), 'bda')} />}
+        {isProc(b.kind) && (
+          <Btn small icon={<Dices size={14} />} onClick={() => changeStyle((s) => void (s.backdrop.seed = Math.floor(Math.random() * 9000) + 2))}>
+            تنويع الشكل
+          </Btn>
+        )}
+      </Group>
+      <Group title="خامات ومشاهد عرض" hint="رخام، خشب، خرسانة، غرفة… مولّدة بالكامل داخل البرنامج وتتلوّن بلونيك.">
+        <Tiles<BackdropKind>
+          value={b.kind}
+          cols={4}
+          items={SCENES.map((k) => ({
+            ...k,
+            preview: <span className="mini-bd" style={backdropCss({ kind: k.value, ...(SAMPLE[k.value] ?? { color: b.color, color2: b.color2 }) })} />,
+          }))}
+          onChange={(v) =>
+            changeStyle((s) => {
+              // عند التبديل من نمط عادي نأخذ ألوان الخامة الافتراضية؛ وبين الخامات نُبقي ألوانك
+              if (!isProc(s.backdrop.kind)) {
+                s.backdrop.color = PROC_SAMPLES[v as keyof typeof PROC_SAMPLES].color
+                s.backdrop.color2 = PROC_SAMPLES[v as keyof typeof PROC_SAMPLES].color2
+              }
+              s.backdrop.kind = v
+            })
+          }
+        />
       </Group>
     </>
   )
@@ -138,6 +170,7 @@ const SHADOWS: { value: ShadowKind; label: string }[] = [
   { value: 'none', label: 'بدون' },
   { value: 'soft', label: 'ظل ناعم' },
   { value: 'float', label: 'طفو' },
+  { value: 'cast', label: 'ظل واقعي' },
   { value: 'contact', label: 'ظل أرضي' },
   { value: 'long', label: 'ظل ممتد' },
   { value: 'glow', label: 'توهج' },
@@ -182,6 +215,7 @@ export function ShapeControls() {
       <Group title="ظل المنتج وتأثيراته">
         <Select value={fx.shadow} options={SHADOWS} onChange={(v) => changeStyle((s) => void (s.productFx.shadow = v))} />
         {fx.shadow !== 'none' && <Slider label="قوة الظل" value={fx.shadowOpacity} min={0} max={1} step={0.01} onChange={(v) => changeStyle((s) => void (s.productFx.shadowOpacity = v), 'pfo')} />}
+        {fx.shadow === 'cast' && <Slider label="اتجاه الضوء" value={fx.shadowAngle ?? -34} min={-70} max={70} unit="°" onChange={(v) => changeStyle((s) => void (s.productFx.shadowAngle = v), 'pfa')} />}
         {(fx.shadow === 'glow' || fx.shadow === 'outline') && <ColorInput label="اللون" value={fx.shadowColor} onChange={(v) => changeStyle((s) => void (s.productFx.shadowColor = v), 'pfc')} />}
         <Switch label="انعكاس أسفل المنتج" checked={fx.reflection} onChange={(v) => changeStyle((s) => void (s.productFx.reflection = v))} />
       </Group>

@@ -145,10 +145,10 @@ const truefalse: Template[] = [
   tplc('truefalse', 'tf-vs', 'مواجهة', 'Versus', ['فاتح', 'ملوّن', 'اختيار'], {
     backdrop: { kind: 'aurora', color: '#FFF7F5', color2: '#FF8F96' },
     decor: [
-      ...chips({ labels: TF, w: 440, y: 800 }),
-      stk('b:ring', 480, 812, 120, 120, INK, WHITE, 'VS', { shadow: 'soft' }),
+      ...chips({ labels: TF, w: 440, y: 1000 }),
+      stk('b:ring', 480, 1012, 120, 120, INK, WHITE, 'VS', { shadow: 'soft' }),
     ],
-    text: qaText({ y: 290, title: { size: 80 } }),
+    text: qaText({ y: 330, title: { size: 80 } }),
     contact: { theme: 'glass' },
   }),
 ]

@@ -16,6 +16,7 @@ import { CheckDialog, PaletteDialog, ReferenceDialog, SuggestDialog } from './pa
 import { CopyDialog } from './panels/CopyDialog'
 
 const CutoutStudio = lazy(() => import('./cutout/CutoutStudio'))
+const RetouchDialog = lazy(() => import('./panels/RetouchDialog'))
 
 function Toasts() {
   const toasts = useEditor((s) => s.toasts)
@@ -190,6 +191,11 @@ export default function App() {
       {dialog === 'suggest' && <SuggestDialog />}
       {dialog === 'reference' && <ReferenceDialog />}
       {dialog === 'copy' && <CopyDialog />}
+      {dialog === 'retouch' && (
+        <Suspense fallback={null}>
+          <RetouchDialog />
+        </Suspense>
+      )}
       {dialog === 'cutout' && (
         <Suspense fallback={null}>
           <CutoutStudio />

@@ -1,7 +1,8 @@
-import { Boxes, GalleryHorizontal, History, ImageIcon, Palette, PenLine, ShieldCheck, Sparkles } from 'lucide-react'
+import { Boxes, Eraser, GalleryHorizontal, History, ImageIcon, Palette, PenLine, ShieldCheck, Sparkles } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useEditor, type Dialog } from '../store/editor'
 import { openKits } from '../store/lock'
+import { openRetouch } from '../store/retouch'
 
 /** عناصر قائمة «أدوات» في المحرر — تُضاف الأدوات الذكية هنا */
 export interface ToolItem {
@@ -17,6 +18,7 @@ export const TOOL_ITEMS: ToolItem[] = [
   { id: 'copy', label: 'مساعد الكتابة (نصوص + منشور + وسوم)', icon: <PenLine size={15} />, run: dlg('copy') },
   { id: 'check', label: 'فحص جودة التصميم قبل النشر', icon: <ShieldCheck size={15} />, run: dlg('check') },
   { id: 'suggest', label: 'اقتراحات تصميم ذكية', icon: <Sparkles size={15} />, run: dlg('suggest') },
+  { id: 'retouch', label: 'محو عنصر من الصورة (شعار، غبار…)', icon: <Eraser size={15} />, run: () => openRetouch() },
   { id: 'palette', label: 'ألوان من صورة المنتج', icon: <Palette size={15} />, run: dlg('palette') },
   { id: 'reference', label: 'تصميم من صورة مرجعية', icon: <ImageIcon size={15} />, run: dlg('reference') },
   { id: 'carousel', label: 'كاروسيل من نص (شريحة لكل فقرة)', icon: <GalleryHorizontal size={15} />, run: dlg('carousel') },

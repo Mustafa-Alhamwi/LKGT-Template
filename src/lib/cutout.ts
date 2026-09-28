@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
-import type { ProductContent } from '../model/types'
+import type { PhotoFix, ProductContent } from '../model/types'
+import { NO_FIX } from '../model/types'
+import { putAsset } from './assets'
 import { getAssetBlob } from './assets'
 import type { CutoutRequest, CutoutResponse } from '../workers/cutout.worker'
 
@@ -36,7 +38,7 @@ function getWorker() {
 }
 
 export function cutoutKey(p: ProductContent): string {
-  return JSON.stringify([p.sourceAssetId, p.maskAssetId, p.paintAssetId, p.cleanup, !!p.emptyBase])
+  return JSON.stringify([p.sourceAssetId, p.maskAssetId, p.paintAssetId, p.cleanup, !!p.emptyBase, p.photo ?? null])
 }
 
 async function compute(p: ProductContent): Promise<Cutout | null> {
@@ -47,7 +49,7 @@ async function compute(p: ProductContent): Promise<Cutout | null> {
   ])
   if (!source) return null
   const id = ++seq
-  const req: CutoutRequest = { id, source, mask, paint, cleanup: p.cleanup, emptyBase: p.emptyBase }
+  const req: CutoutRequest = { id, source, mask, paint, cleanup: p.cleanup, emptyBase: p.emptyBase, photo: p.photo }
   const res = await new Promise<CutoutResponse>((resolve) => {
     waiting.set(id, resolve)
     getWorker().postMessage(req)
@@ -114,4 +116,18 @@ export function useCutout(p: ProductContent | null | undefined): { cutout: Cutou
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key])
   return { cutout: sync !== undefined ? sync : last, busy }
+}
+
+/** تحسين صورة كاملة (خلفية) وحفظ النتيجة كأصل جديد — تعيد معرّف الأصل الجديد */
+export async function enhanceAsset(assetId: string, photo: PhotoFix = { ...NO_FIX, auto: true, sharpen: 0.35 }): Promise<string | null> {
+  const source = await getAssetBlob(assetId)
+  if (!source) return null
+  const id = ++seq
+  const res = await new Promise<CutoutResponse>((resolve) => {
+    waiting.set(id, resolve)
+    getWorker().postMessage({ id, op: 'enhance', source, mask: null, paint: null, cleanup: { low: 0, high: 255, islands: false, fillHoles: false, choke: 0, feather: 0 }, photo } satisfies CutoutRequest)
+  })
+  if (!res.ok || !res.blob) return null
+  const info = await putAsset(res.blob, 'enhanced')
+  return info.id
 }

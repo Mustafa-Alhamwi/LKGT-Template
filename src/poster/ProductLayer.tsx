@@ -33,6 +33,42 @@ function productFilter(p: ProductContent, fx: ProductFx): string {
   return parts.join(' ') || 'none'
 }
 
+/** ظل واقعي: ظل ملامسة داكن + ظل ممتد بحسب شكل المنتج يتلاشى بالبعد ويتشتت أكثر */
+function CastShadow({ url, b, fx, flip }: { url: string; b: Rect; fx: ProductFx; flip: boolean }) {
+  const ang = fx.shadowAngle ?? -34
+  const o = fx.shadowOpacity
+  const contactH = Math.max(22, b.w * 0.075)
+  const layer = (blur: number, sy: number, alpha: number, fade: number, lift: number): React.CSSProperties => ({
+    position: 'absolute',
+    left: b.x,
+    top: b.y,
+    width: b.w,
+    height: b.h,
+    filter: `brightness(0) blur(${blur}px)`,
+    opacity: alpha,
+    transformOrigin: '50% 100%',
+    transform: `translateY(${lift}px) ${flip ? 'scaleX(-1) ' : ''}scaleY(${sy}) skewX(${ang}deg)`,
+    WebkitMaskImage: `linear-gradient(to top, #000 0%, rgba(0,0,0,0.55) ${fade * 0.45}%, transparent ${fade}%)`,
+    maskImage: `linear-gradient(to top, #000 0%, rgba(0,0,0,0.55) ${fade * 0.45}%, transparent ${fade}%)`,
+  })
+  return (
+    <>
+      <img src={url} alt="" draggable={false} style={layer(b.w * 0.035, 0.26, o * 0.5, 96, b.h * 0.018)} />
+      <img src={url} alt="" draggable={false} style={layer(b.w * 0.011, 0.14, o * 0.68, 60, b.h * 0.008)} />
+      <div
+        style={{
+          position: 'absolute',
+          left: b.x + b.w * 0.05,
+          top: b.y + b.h - contactH * 0.5,
+          width: b.w * 0.9,
+          height: contactH,
+          background: `radial-gradient(closest-side, rgba(0,0,0,${Math.min(0.85, o * 0.95)}) 0%, rgba(0,0,0,${o * 0.38}) 58%, transparent 100%)`,
+        }}
+      />
+    </>
+  )
+}
+
 interface Props {
   product: ProductContent
   cutout: Cutout
@@ -61,6 +97,7 @@ export function ProductLayer({ product, cutout, bbox, fx, busy }: Props) {
           }}
         />
       )}
+      {fx.shadow === 'cast' && <CastShadow url={cutout.url} b={b} fx={fx} flip={!!product.flip} />}
       {fx.shadow === 'long' && (
         <img
           src={cutout.url}
@@ -93,6 +130,7 @@ export function ProductLayer({ product, cutout, bbox, fx, busy }: Props) {
             transform: 'scaleY(-1)',
             transformOrigin: '50% 50%',
             opacity: 0.32,
+            filter: 'blur(0.8px)',
             WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 32%)',
             maskImage: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 32%)',
           }}

@@ -90,6 +90,11 @@ function scaleTextItem(st: TextStyle, fs: number): TextStyle {
   return { ...st, size: Math.round(st.size * fs), maxSize: Math.round(st.maxSize * fs), marginTop: Math.round(st.marginTop * fs) }
 }
 
+/** أعلى نقطة لشريط التواصل في مقاس معيّن */
+function barTopOf(to: Canvas, brand: BrandConfig): number {
+  return brand.contact.y + (to.h - 1440) - (to.safeBottom ?? 0)
+}
+
 /** تحويل نمط القالب من مقاس لآخر */
 export function resizeStyle(st: TemplateStyle, from: Canvas, to: Canvas, brand: BrandConfig = DEFAULT_BRAND): TemplateStyle {
   if (from.w === to.w && from.h === to.h) return st
@@ -142,6 +147,9 @@ export function resizeStyle(st: TemplateStyle, from: Canvas, to: Canvas, brand: 
     out.productArea = { x: Math.round(Math.max(40, to.w * 0.05)), y: Math.round(brand.logo.top + 30), w, h: Math.round(to.h - brand.logo.top - 30 - 190) }
   } else {
     out.productArea = { x: Math.round(a.x * c.sx), y: Math.round(a.y * c.sy), w: Math.round(a.w * c.sx), h: Math.round(a.h * c.sy) }
+    // لا يهبط المنتج فوق شريط التواصل (خصوصاً مع المنطقة الآمنة في الستوري)
+    const maxBottom = barTopOf(to, brand) - 24
+    if (out.productArea.y + out.productArea.h > maxBottom) out.productArea.h = Math.round(Math.max(220, maxBottom - out.productArea.y))
   }
 
   // زخارف وعناصر
@@ -188,7 +196,7 @@ export function resizeDesign(d: Design, to: Canvas, brand: BrandConfig = DEFAULT
     const wide = kind === 'wide'
     setProductBox(out, {
       cx: wide ? out.style.productArea.x + out.style.productArea.w / 2 : (box0.x + box0.w / 2) * c.sx,
-      bottom: wide ? out.style.productArea.y + out.style.productArea.h * 0.94 : (box0.y + box0.h) * c.sy,
+      bottom: wide ? out.style.productArea.y + out.style.productArea.h * 0.94 : Math.min((box0.y + box0.h) * c.sy, barTopOf(to, brand) - 10),
       w: box0.w * (wide ? Math.min(1, (out.style.productArea.w * 0.95) / box0.w) : sp),
     })
   }

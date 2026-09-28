@@ -58,6 +58,22 @@ export interface MaskCleanup {
   decontaminate?: boolean
 }
 
+/** تحسين جودة الصورة (يُطبَّق على البكسلات عند التفريغ) */
+export interface PhotoFix {
+  /** مستويات + توازن إضاءة + تشبع تلقائي */
+  auto: boolean
+  /** حرارة اللون −100 (بارد) … +100 (دافئ) */
+  temp: number
+  /** حدّة 0 … 1.5 */
+  sharpen: number
+  /** إزالة ضجيج 0 … 1 */
+  denoise: number
+  /** تكبير الدقة (تنعيم + شحذ — لا يُضيف تفاصيل جديدة) */
+  upscale: 1 | 2
+}
+
+export const NO_FIX: PhotoFix = { auto: false, temp: 0, sharpen: 0, denoise: 0, upscale: 1 }
+
 export interface ProductContent {
   /** مصدر البكسلات: صورة المشهد نفسها أو صورة PNG مفرغة مرفوعة */
   sourceAssetId: string
@@ -77,6 +93,7 @@ export interface ProductContent {
   opacity?: number
   /** ابدأ من قناع فارغ (للتحديد اليدوي بالكامل) */
   emptyBase?: boolean
+  photo?: PhotoFix
 }
 
 export interface AdTexts {
@@ -290,12 +307,22 @@ export type BackdropKind =
   | 'linear'
   | 'grid'
   | 'dots'
+  | 'sunburst'
+  | 'marble'
+  | 'concrete'
+  | 'wood'
+  | 'terrazzo'
+  | 'bokeh'
+  | 'room'
+  | 'silk'
 
 export interface BackdropStyle {
   kind: BackdropKind
   color: string
   color2: string
   angle?: number
+  /** بذرة الخامات المولّدة (تنويع الشكل) */
+  seed?: number
 }
 
 export interface FadeStyle {
@@ -318,13 +345,15 @@ export interface SceneFx {
   grayscale: number
 }
 
-export type ShadowKind = 'none' | 'soft' | 'contact' | 'float' | 'glow' | 'long' | 'outline'
+export type ShadowKind = 'none' | 'soft' | 'contact' | 'float' | 'glow' | 'long' | 'outline' | 'cast'
 
 export interface ProductFx {
   shadow: ShadowKind
   shadowOpacity: number
   shadowColor: string
   reflection: boolean
+  /** اتجاه الظل الواقعي (ميلان بالدرجات) */
+  shadowAngle?: number
 }
 
 export type DecorKind =

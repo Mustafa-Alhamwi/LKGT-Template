@@ -1,5 +1,6 @@
 import type { BackdropStyle } from '../model/types'
 import { mix, withAlpha } from '../lib/color'
+import { proceduralUrl } from '../lib/procedural'
 
 /** نسيج حبيبات ناعم (PNG مولّد مرة واحدة — آمن للتصدير) */
 let noiseCache: string | null = null
@@ -83,6 +84,29 @@ export function backdropCss(b: BackdropStyle): React.CSSProperties {
         backgroundColor: color,
         backgroundImage: `radial-gradient(${color2} 2.4px, transparent 3px)`,
         backgroundSize: '34px 34px',
+      }
+    case 'sunburst':
+      return {
+        background: `radial-gradient(circle at 50% 42%, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 58%), repeating-conic-gradient(from 0deg at 50% 42%, ${color} 0deg 7.5deg, ${color2} 7.5deg 15deg)`,
+      }
+    case 'marble':
+    case 'wood':
+    case 'terrazzo':
+    case 'bokeh':
+    case 'room':
+    case 'silk':
+      return {
+        backgroundColor: color,
+        backgroundImage: `url("${proceduralUrl(b.kind, color, color2, b.seed ?? 1)}")`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }
+    case 'concrete':
+      return {
+        backgroundColor: color,
+        backgroundImage: `url("${noiseUrl()}"), url("${proceduralUrl('concrete', color, color2, b.seed ?? 1)}")`,
+        backgroundSize: '160px 160px, cover',
+        backgroundPosition: '0 0, center',
       }
     case 'paper':
       return {

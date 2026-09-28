@@ -1,12 +1,15 @@
-import { FlipHorizontal2, Link2, Scan, Trash2, Wand2, Upload, Layers, Eye, EyeOff, Scissors } from 'lucide-react'
-import { Btn, Group, IconBtn, Slider } from '../../ui/kit'
-import { change, changeContent, useEditor } from '../../store/editor'
+import { Eraser, FlipHorizontal2, Link2, Scan, Trash2, Wand2, Upload, Layers, Eye, EyeOff, Scissors, Sparkles, RotateCcw } from 'lucide-react'
+import { Btn, Chips, Group, IconBtn, Slider } from '../../ui/kit'
+import { change, changeContent, toast, useEditor } from '../../store/editor'
 import { useAsset } from '../../lib/assets'
-import { useCutout } from '../../lib/cutout'
+import { enhanceAsset, useCutout } from '../../lib/cutout'
 import { autoPlacement, coverPlacement, fitWidthPlacement, productBoxOf, setProductBox } from '../../poster/geometry'
 import { importImage, pickFile } from '../../lib/importer'
 import { PhotoControls, ShapeControls } from './design'
-import { canvasOf } from '../../model/types'
+import { NO_FIX, canvasOf } from '../../model/types'
+import type { PhotoFix } from '../../model/types'
+import { setTask } from '../../store/editor'
+import { openRetouch } from '../../store/retouch'
 
 export function openCutoutStudio() {
   useEditor.setState({ dialog: 'cutout' })
@@ -42,6 +45,11 @@ export function ProductControls() {
           {busy ? '⏳ جارِ المعالجة…' : product.linked && scene ? 'المنتج منسوخ فوق التدرج بنفس مكانه في الصورة تماماً — اسحبه لتحريكه بشكل مستقل.' : 'اسحب المنتج في التصميم، وعجلة الفأرة للتكبير.'}
         </p>
         <div className="row-btns">
+          {!sameAsScene && (
+            <Btn small icon={<Eraser size={14} />} title="حذف غبار أو شعار من صورة المنتج" onClick={() => openRetouch('product')}>
+              محو عنصر
+            </Btn>
+          )}
           {sameAsScene && !product.linked && (
             <Btn small icon={<Link2 size={14} />} onClick={() => changeContent((c) => void ((c.product!.linked = true), (c.product!.place = null)))}>
               للمكان الأصلي
@@ -68,13 +76,47 @@ export function ProductControls() {
           قلب أفقي
         </Btn>
       </Group>
-      <Group title="تحسين الصورة">
+      <PhotoFixGroup photo={product.photo ?? NO_FIX} set={(fn, key) => changeContent((c) => void fn((c.product!.photo ??= { ...NO_FIX })), key)} />
+      <Group title="ضبط سريع للألوان">
         <Slider label="الإضاءة" value={product.enhance.brightness} min={0.6} max={1.5} step={0.01} onChange={(v) => changeContent((c) => void (c.product!.enhance.brightness = v), 'pe-b')} />
         <Slider label="التباين" value={product.enhance.contrast} min={0.6} max={1.6} step={0.01} onChange={(v) => changeContent((c) => void (c.product!.enhance.contrast = v), 'pe-c')} />
         <Slider label="التشبع" value={product.enhance.saturate} min={0} max={2} step={0.01} onChange={(v) => changeContent((c) => void (c.product!.enhance.saturate = v), 'pe-s')} />
       </Group>
       <ShapeControls />
     </>
+  )
+}
+
+/** تحسين جودة صورة المنتج: تلقائي + حرارة + حدّة + ضجيج + تكبير */
+function PhotoFixGroup({ photo, set }: { photo: PhotoFix; set: (fn: (p: PhotoFix) => void, key: string) => void }) {
+  const active = photo.auto || photo.temp !== 0 || photo.sharpen > 0 || photo.denoise > 0 || photo.upscale === 2
+  return (
+    <Group title="جودة الصورة" hint="تُعالَج بكسلات المنتج نفسها (غير مدمّرة — يمكن إيقافها في أي وقت).">
+      <div className="row-btns">
+        <Btn small variant={photo.auto ? 'primary' : 'default'} icon={<Sparkles size={14} />} onClick={() => set((p) => void (p.auto = !p.auto), 'ph-auto')}>
+          {photo.auto ? 'التحسين التلقائي مُفعّل' : 'تحسين تلقائي'}
+        </Btn>
+        {active && (
+          <Btn small variant="ghost" icon={<RotateCcw size={14} />} onClick={() => set((p) => void Object.assign(p, NO_FIX), 'ph-reset')}>
+            إعادة
+          </Btn>
+        )}
+      </div>
+      <Slider label="حرارة اللون" value={photo.temp} min={-100} max={100} onChange={(v) => set((p) => void (p.temp = v), 'ph-temp')} />
+      <Slider label="حدّة التفاصيل" value={photo.sharpen} min={0} max={1.5} step={0.05} onChange={(v) => set((p) => void (p.sharpen = v), 'ph-sh')} />
+      <Slider label="إزالة الضجيج" value={photo.denoise} min={0} max={1} step={0.05} onChange={(v) => set((p) => void (p.denoise = v), 'ph-dn')} />
+      <div className="fld">
+        <span className="fld-label">الدقة</span>
+        <Chips
+          value={photo.upscale}
+          options={[
+            { value: 1, label: 'الأصلية' },
+            { value: 2, label: 'تكبير ×2', title: 'تنعيم وشحذ لرفع جودة الطباعة — لا يضيف تفاصيل غير موجودة' },
+          ]}
+          onChange={(v) => set((p) => void (p.upscale = v as 1 | 2), 'ph-up')}
+        />
+      </div>
+    </Group>
   )
 }
 
@@ -85,6 +127,22 @@ export function SceneControls() {
   const cv = useEditor((s) => canvasOf(s.design))
   if (!scene || !info) return null
   const place = scene.place ?? autoPlacement(info.w, info.h, cv)
+  const bakeScene = async (photo: PhotoFix, ok: string) => {
+    setTask({ label: 'جارِ معالجة الصورة…', progress: null })
+    try {
+      const id = await enhanceAsset(scene.assetId, photo)
+      if (!id) return toast('تعذّرت معالجة الصورة', 'error')
+      if (photo.upscale === 2 && id === scene.assetId) return toast('الصورة كبيرة أصلاً ولا تحتاج تكبيراً', 'info')
+      changeContent((c) => {
+        const old = c.scene!.assetId
+        c.scene!.assetId = id
+        if (c.product && c.product.sourceAssetId === old) c.product.sourceAssetId = id
+      })
+      toast(ok, 'ok')
+    } finally {
+      setTask(null)
+    }
+  }
   const cover = coverPlacement(info.w, info.h, cv)
   const zoom = place.w / cover.w
   return (
@@ -139,6 +197,17 @@ export function SceneControls() {
           </Btn>
           <Btn small onClick={() => changeContent((c) => void (c.scene!.place = null))}>
             تلقائي
+          </Btn>
+        </div>
+        <div className="row-btns">
+          <Btn small icon={<Sparkles size={14} />} title="مستويات وإضاءة وتشبع تلقائية + شحذ خفيف" onClick={() => bakeScene({ ...NO_FIX, auto: true, sharpen: 0.3 }, 'تم تحسين الصورة')}>
+            تحسين تلقائي
+          </Btn>
+          <Btn small icon={<Layers size={14} />} title="تكبير الدقة ×2 بالتنعيم والشحذ" onClick={() => bakeScene({ ...NO_FIX, upscale: 2 }, 'تم تكبير الدقة ×2')}>
+            تكبير ×2
+          </Btn>
+          <Btn small icon={<Eraser size={14} />} title="حذف شعار أو غبار أو عنصر من الصورة" onClick={() => openRetouch('scene')}>
+            محو عنصر
           </Btn>
         </div>
         <Slider

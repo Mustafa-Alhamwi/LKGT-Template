@@ -131,11 +131,13 @@ export function PaletteDialog() {
   useEffect(() => {
     designPalette(design).then((p) => {
       setPal(p)
-      setPick(accentOf(p)?.hex ?? p[0]?.hex ?? null)
+      setPick(accentOf(p)?.hex ?? brand.primary)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   const har = pick ? harmonies(pick) : []
+  const neutral = !!pal && pal.length > 0 && !accentOf(pal)
+  const brandColors = Array.from(new Set([brand.primary, brand.secondary, ...brand.palette].filter(Boolean)))
   return (
     <Modal title="ألوان من صورة المنتج" onClose={close}>
       {pal === null && (
@@ -146,7 +148,14 @@ export function PaletteDialog() {
       {pal && !pal.length && <p className="hint">أضف صورة منتج أو خلفية أولاً ليستخرج البرنامج ألوانها.</p>}
       {pal && pal.length > 0 && (
         <>
-          <p className="hint">الألوان الغالبة في صورتك. اختر لوناً لتُصبَغ به عناصر القالب (بدل الأحمر) أو أضِفه إلى لوحة الهوية.</p>
+          {neutral ? (
+            <div className="alert info">
+              <Info size={16} />
+              <span>منتجك محايد اللون (أبيض / رمادي / أسود) فلا يوجد لون مميّز يُستخرج منه — الأفضل إبقاء لون هويتك. يمكنك اختيار لون من هويتك أو من التدرجات أدناه.</span>
+            </div>
+          ) : (
+            <p className="hint">الألوان الغالبة في صورتك. اختر لوناً لتُصبَغ به عناصر القالب (بدل الأحمر) أو أضِفه إلى لوحة الهوية.</p>
+          )}
           <div className="pal-big">
             {pal.map((c) => (
               <button key={c.hex} className={pick === c.hex ? 'on' : ''} onClick={() => setPick(c.hex)} title={c.hex}>
@@ -156,6 +165,18 @@ export function PaletteDialog() {
               </button>
             ))}
           </div>
+          {neutral && (
+            <>
+              <h4 className="lib-h">من ألوان هويتك</h4>
+              <div className="pal-big compact">
+                {brandColors.map((c) => (
+                  <button key={c} className={pick === c ? 'on' : ''} onClick={() => setPick(c)} title={c}>
+                    <i style={{ background: c }} />
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
           {pick && (
             <>
               <h4 className="lib-h">تدرّجات متناسقة</h4>

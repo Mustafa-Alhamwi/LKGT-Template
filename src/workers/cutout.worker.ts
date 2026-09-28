@@ -5,8 +5,19 @@
  * ← تعديلات الفرشاة ← قص المنتج على حدوده
  * ------------------------------------------------------------------ */
 
+export interface PhotoFixReq {
+  auto: boolean
+  temp: number
+  sharpen: number
+  denoise: number
+  upscale: 1 | 2
+}
+
 export interface CutoutRequest {
   id: number
+  /** enhance = تحسين صورة كاملة دون تفريغ (للخلفيات) */
+  op?: 'cutout' | 'enhance'
+  photo?: PhotoFixReq
   source: Blob
   mask: Blob | null
   paint: Blob | null
@@ -224,7 +235,182 @@ function decontaminate(rgba: Uint8ClampedArray, alpha: Uint8ClampedArray, w: num
   }
 }
 
+/* ------------------------------ تحسين الصور ------------------------------ */
+
+const clamp255 = (v: number) => (v < 0 ? 0 : v > 255 ? 255 : v)
+
+/** مستويات تلقائية + تعديل غاما نحو متوسط إضاءة متوازن + رفع تشبع خفيف */
+function autoLevels(d: Uint8ClampedArray) {
+  const hist = new Uint32Array(256)
+  let n = 0
+  let sum = 0
+  let satSum = 0
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3] < 200) continue
+    const r = d[i]
+    const g = d[i + 1]
+    const b = d[i + 2]
+    const l = (0.299 * r + 0.587 * g + 0.114 * b) | 0
+    hist[l]++
+    n++
+    sum += l
+    const mx = Math.max(r, g, b)
+    const mn = Math.min(r, g, b)
+    satSum += mx ? (mx - mn) / mx : 0
+  }
+  if (n < 64) return
+  const pct = (q: number) => {
+    let acc = 0
+    const t = n * q
+    for (let i = 0; i < 256; i++) {
+      acc += hist[i]
+      if (acc >= t) return i
+    }
+    return 255
+  }
+  const lo = Math.min(pct(0.004), 46)
+  const hi = Math.max(pct(0.996), 200)
+  const mean = Math.min(0.92, Math.max(0.08, (sum / n - lo) / Math.max(1, hi - lo)))
+  let ex = Math.log(0.5) / Math.log(mean)
+  ex = 1 + (Math.min(1.4, Math.max(0.72, ex)) - 1) * 0.65
+  const sat = satSum / n
+  const boost = sat < 0.2 ? 1.16 : sat < 0.34 ? 1.07 : 1
+  const lut = new Uint8ClampedArray(256)
+  for (let i = 0; i < 256; i++) lut[i] = 255 * Math.pow(Math.min(1, Math.max(0, (i - lo) / Math.max(1, hi - lo))), ex)
+  for (let i = 0; i < d.length; i += 4) {
+    let r = lut[d[i]]
+    let g = lut[d[i + 1]]
+    let b = lut[d[i + 2]]
+    if (boost !== 1) {
+      const y = 0.299 * r + 0.587 * g + 0.114 * b
+      r = clamp255(y + (r - y) * boost)
+      g = clamp255(y + (g - y) * boost)
+      b = clamp255(y + (b - y) * boost)
+    }
+    d[i] = r
+    d[i + 1] = g
+    d[i + 2] = b
+  }
+}
+
+function temperature(d: Uint8ClampedArray, temp: number) {
+  const t = Math.max(-100, Math.min(100, temp)) / 100
+  if (!t) return
+  const kr = 1 + 0.12 * t
+  const kb = 1 - 0.14 * t
+  const kg = 1 + 0.015 * t
+  for (let i = 0; i < d.length; i += 4) {
+    d[i] = clamp255(d[i] * kr)
+    d[i + 1] = clamp255(d[i + 1] * kg)
+    d[i + 2] = clamp255(d[i + 2] * kb)
+  }
+}
+
+/** مرشّح 3×3 يحافظ على الحواف ويتجاهل البكسلات الشفافة */
+function denoise(d: Uint8ClampedArray, w: number, h: number, amount: number) {
+  if (amount <= 0) return
+  const src = new Uint8ClampedArray(d)
+  const thr = 16 + amount * 38
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const i = (y * w + x) * 4
+      if (src[i + 3] < 250) continue
+      let r = 0
+      let g = 0
+      let b = 0
+      let c = 0
+      for (let yy = -1; yy <= 1; yy++) {
+        for (let xx = -1; xx <= 1; xx++) {
+          const j = i + (yy * w + xx) * 4
+          if (src[j + 3] < 250) continue
+          r += src[j]
+          g += src[j + 1]
+          b += src[j + 2]
+          c++
+        }
+      }
+      if (c < 5) continue
+      r /= c
+      g /= c
+      b /= c
+      const diff = Math.abs(src[i] - r) + Math.abs(src[i + 1] - g) + Math.abs(src[i + 2] - b)
+      const k = amount * (diff < thr * 3 ? 1 : Math.pow((thr * 3) / diff, 2))
+      d[i] = src[i] + (r - src[i]) * k
+      d[i + 1] = src[i + 1] + (g - src[i + 1]) * k
+      d[i + 2] = src[i + 2] + (b - src[i + 2]) * k
+    }
+  }
+}
+
+/** شحذ Unsharp: تمويه 3×3 مرتين ثم إضافة الفرق */
+function sharpen(d: Uint8ClampedArray, w: number, h: number, amount: number) {
+  if (amount <= 0) return
+  const n = w * h
+  const planes = [new Uint8ClampedArray(n), new Uint8ClampedArray(n), new Uint8ClampedArray(n)]
+  for (let i = 0; i < n; i++) {
+    planes[0][i] = d[i * 4]
+    planes[1][i] = d[i * 4 + 1]
+    planes[2][i] = d[i * 4 + 2]
+  }
+  const blurred = planes.map((p) => {
+    const c = new Uint8ClampedArray(p)
+    boxBlur(c, w, h, 1)
+    boxBlur(c, w, h, 1)
+    return c
+  })
+  for (let i = 0; i < n; i++) {
+    if (d[i * 4 + 3] < 40) continue
+    for (let k = 0; k < 3; k++) {
+      let diff = planes[k][i] - blurred[k][i]
+      if (Math.abs(diff) < 2) diff = 0
+      d[i * 4 + k] = clamp255(planes[k][i] + diff * amount * 1.6)
+    }
+  }
+}
+
+/** يطبّق التحسينات على بكسلات RGBA (يعدّل المصفوفة مباشرة) */
+function applyPhoto(d: Uint8ClampedArray, w: number, h: number, p: PhotoFixReq) {
+  if (p.auto) autoLevels(d)
+  if (p.temp) temperature(d, p.temp)
+  if (p.denoise > 0) denoise(d, w, h, p.denoise)
+  if (p.sharpen > 0) sharpen(d, w, h, p.sharpen)
+}
+
+async function upscale2x(data: ImageData, sharpenAmt: number): Promise<{ canvas: OffscreenCanvas; w: number; h: number }> {
+  const src = new OffscreenCanvas(data.width, data.height)
+  src.getContext('2d')!.putImageData(data, 0, 0)
+  const W = data.width * 2
+  const H = data.height * 2
+  const big = new OffscreenCanvas(W, H)
+  const ctx = big.getContext('2d', { willReadFrequently: true })!
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
+  ctx.drawImage(src, 0, 0, W, H)
+  if (sharpenAmt > 0) {
+    const img = ctx.getImageData(0, 0, W, H)
+    sharpen(img.data, W, H, sharpenAmt)
+    ctx.putImageData(img, 0, 0)
+  }
+  return { canvas: big, w: W, h: H }
+}
+
+async function enhanceWhole(req: CutoutRequest): Promise<CutoutResponse> {
+  const src = await readPixels(req.source)
+  const p = req.photo ?? { auto: true, temp: 0, sharpen: 0.35, denoise: 0, upscale: 1 }
+  applyPhoto(src.data, src.w, src.h, p)
+  const img = new ImageData(src.data as unknown as Uint8ClampedArray<ArrayBuffer>, src.w, src.h)
+  let canvas = new OffscreenCanvas(src.w, src.h)
+  canvas.getContext('2d')!.putImageData(img, 0, 0)
+  if (p.upscale === 2 && Math.max(src.w, src.h) <= 3200) {
+    const u = await upscale2x(img, 0.45)
+    canvas = u.canvas
+  }
+  const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.94 })
+  return { id: req.id, ok: true, blob, srcW: src.w, srcH: src.h }
+}
+
 async function process(req: CutoutRequest): Promise<CutoutResponse> {
+  if (req.op === 'enhance') return enhanceWhole(req)
   const src = await readPixels(req.source)
   const { w, h } = src
   const n = w * h
@@ -310,8 +496,12 @@ async function process(req: CutoutRequest): Promise<CutoutResponse> {
       out.data[di + 3] = hasMask ? (alpha[si] * src.data[si * 4 + 3]) / 255 : alpha[si]
     }
   }
-  const canvas = new OffscreenCanvas(cw, ch)
+  let canvas = new OffscreenCanvas(cw, ch)
+  const ph = req.photo
+  const hasFix = !!ph && (ph.auto || ph.temp !== 0 || ph.sharpen > 0 || ph.denoise > 0)
+  if (ph && hasFix) applyPhoto(out.data, cw, ch, ph)
   canvas.getContext('2d')!.putImageData(out, 0, 0)
+  if (ph?.upscale === 2 && Math.max(cw, ch) <= 3200) canvas = (await upscale2x(out, 0.45)).canvas
   const blob = await canvas.convertToBlob({ type: 'image/png' })
   return { id: req.id, ok: true, blob, crop: { x: minX, y: minY, w: cw, h: ch }, srcW: w, srcH: h }
 }

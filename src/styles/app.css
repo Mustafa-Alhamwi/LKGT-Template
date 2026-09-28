@@ -3530,3 +3530,105 @@ kbd.rec {
     position: static;
   }
 }
+
+/* ------------------------------ محو العناصر ------------------------------ */
+.rt {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 18px;
+  align-items: start;
+}
+.rt-stage {
+  min-width: 0;
+}
+.rt-box {
+  position: relative;
+  height: min(64vh, 640px);
+  overflow: auto;
+  border-radius: 16px;
+  background: repeating-conic-gradient(var(--raised) 0% 25%, var(--raised-2) 0% 50%) 50% / 22px 22px;
+  border: 1px solid var(--line);
+  display: grid;
+  place-items: center;
+}
+.rt-canvas {
+  position: relative;
+  flex: none;
+  margin: 4px;
+  box-shadow: 0 10px 40px -12px rgba(0, 0, 0, 0.6);
+}
+.rt-canvas img,
+.rt-canvas canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  user-select: none;
+}
+.rt-canvas canvas {
+  cursor: none;
+}
+.rt-cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.7), inset 0 0 0 1.5px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 3;
+}
+.rt-load {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+.rt-busy {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(3px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  z-index: 5;
+  color: #fff;
+}
+.rt-busy .task-bar {
+  width: 220px;
+}
+.rt-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.rt-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rt-sec > span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.rt-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+@media (max-width: 860px) {
+  .rt {
+    grid-template-columns: 1fr;
+  }
+}
+.alert.info {
+  background: rgba(80, 160, 255, 0.1);
+  border-color: rgba(80, 160, 255, 0.4);
+  color: #4c9bff;
+}
