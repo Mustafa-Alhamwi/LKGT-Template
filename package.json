@@ -1,9 +1,9 @@
 {
   "name": "lkgt-template-studio",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
-  "description": "LKGT Template Studio — محرر قوالب إعلانات LKGT بمقاس إنستغرام 1080×1440",
+  "description": "LKGT Template Studio — استوديو قوالب السوشال ميديا: إعلانات، صح/خطأ، حقيقة/خرافة، عروض، هل تعلم — تصدير متعدد المقاسات وPDF وPSD وفيديو",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
